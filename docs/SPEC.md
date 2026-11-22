@@ -117,13 +117,14 @@ command tests the connection and lists models before any generation.
 - **M3** — framework mapping + search grounding (both opt-in).
 - **M4** — Tauri desktop, signed installers, PyPI release polish.
 
-## Open questions (decide before M1 stories)
+## Decided (2026-11-22, before M1 stories)
 
-- PDF engine: WeasyPrint (HTML fidelity, heavier install) vs Typst
-  (fast, separate template language)? Lean WeasyPrint for M1.
-- MasterProfile editing UX in CLI-only M1: hand-edited JSON/YAML is
-  acceptable; a review UI waits for `serve`.
-- How strict is the verifier by default — drop unsupported bullets, or
-  keep-and-flag? Lean: flag in UI, drop only with `--strict`.
-- Locale naming: "résumé" (US) vs "CV" (AU/UK/academic) — theme-level
-  setting, not a fork.
+- PDF engine: **WeasyPrint** from the HTML output.
+- MasterProfile editing in CLI-only M1: **hand-edited** JSON/YAML;
+  a review UI waits for `serve`.
+- Verifier default: **keep-and-flag**; `--strict` drops unsupported bullets.
+- Wording: **"resume"** (US spelling); localised document headings may
+  become a theme-level `locale` setting later, not a fork.
+
+M1 stories cut from this spec live in [STORIES.md](STORIES.md);
+shared names in [GLOSSARY.md](GLOSSARY.md).
