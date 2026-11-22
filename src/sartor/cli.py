@@ -80,7 +80,20 @@ def init(
 @app.command()
 def doctor() -> None:
     """Check the configured provider before any generation (S-002)."""
-    _not_yet("S-002", "doctor")
+    from sartor.config import ConfigurationError, load_config
+    from sartor.doctor import run_doctor
+
+    try:
+        config = load_config()
+    except ConfigurationError as exc:
+        err_console.print(f"config: {exc}")
+        raise typer.Exit(code=1) from exc
+    result = run_doctor(config)
+    target = console if result.ok else err_console
+    for line in result.lines:
+        target.print(line)
+    if not result.ok:
+        raise typer.Exit(code=1)
 
 
 @app.command()

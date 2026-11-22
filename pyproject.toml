@@ -44,16 +44,15 @@ import = [
 ]
 # PDF from the HTML output (S-009); heavy, stays optional.
 pdf = ["weasyprint>=60.0"]
-# Anthropic native provider (S-002). OpenAI-compatible needs no extra.
-anthropic = ["anthropic>=0.40.0"]
 # JSON Resume schema validation (S-004).
 schema = ["jsonschema>=4.20.0"]
+# Both providers (S-002) speak plain HTTPS via the core `requests`
+# dependency — no vendor SDK extra is needed.
 all = [
     "pypdf>=4.0.0",
     "python-docx>=1.1.0",
     "beautifulsoup4>=4.12.0",
     "weasyprint>=60.0",
-    "anthropic>=0.40.0",
     "jsonschema>=4.20.0",
 ]
 

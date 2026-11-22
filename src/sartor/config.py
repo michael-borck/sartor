@@ -85,6 +85,13 @@ def load_config(start: Path | None = None, home: Path | None = None) -> dict[str
         if candidate.is_file():
             merged.update(_load_yaml(candidate))
     config = {key: _expand(value) for key, value in merged.items()}
+    raw_key = merged.get("api_key")
+    if isinstance(raw_key, str):
+        match = _ENV_REF.match(raw_key.strip())
+        if match:
+            # Remember which env var the key was meant to come from, so a
+            # missing key can be reported by name (never by value).
+            config["api_key_env"] = match.group(1)
     validate_config(config)
     return config
 

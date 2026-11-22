@@ -56,7 +56,7 @@ Acceptance:
   distinct one-line error naming the fix, exit code 1.
 - [unit] `anthropic` with no key reports the missing env var by name,
   without printing any key value.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor doctor` -> one line per check -> final "ok" or first failure. No way back needed; it changes nothing.
 - Surface: terminal command.
