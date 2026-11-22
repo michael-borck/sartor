@@ -237,7 +237,25 @@ def target_add(
 @app.command()
 def tailor(name: str = typer.Argument(...)) -> None:
     """Tailor the profile against a target (S-006)."""
-    _not_yet("S-006", "tailor")
+    import json as _json
+
+    from sartor.tailor import TailorError, tailor_resume
+
+    project = _project_or_exit()
+    provider = _provider_or_exit()
+    try:
+        out = tailor_resume(project, name, provider)
+    except TailorError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    meta = _json.loads(out.read_text(encoding="utf-8"))["meta"]["sartor"]
+    kept_bits = ", ".join(f"{k} {v}" for k, v in meta["kept"].items())
+    console.print(f"Tailored for {name}: kept {kept_bits or 'nothing'}")
+    console.print(
+        f"Bullets: {meta['bullets_kept']} kept, "
+        f"{meta['bullets_dropped']} dropped (no evidence or unsupported fact)"
+    )
+    console.print(f"Verify: sartor verify {name}")
 
 
 @app.command()

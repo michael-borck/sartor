@@ -151,7 +151,7 @@ Acceptance:
   is listed in the run summary with counts per section.
 - [self] Running `tailor` with no profile or unknown target name fails
   naming the missing piece and the command that creates it.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor tailor NAME` -> progress per section -> summary (kept/dropped counts) -> "Verify: sartor verify NAME". Re-running overwrites only that target's export folder.
 - Surface: terminal command.
