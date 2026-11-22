@@ -5,8 +5,9 @@
 Privacy-first résumé tailoring. Give Sartor your real experience and one
 job advertisement; it selects, reorders and rewrites only what your
 evidence supports, then renders a finished résumé in Markdown, HTML, PDF
-and DOCX — plus a pitch script for [Narra](https://github.com/michael-borck/narra)
-and a deck for [SlideStream](https://github.com/michael-borck/slide-stream).
+and DOCX. Pitch-script and deck handoffs for
+[Narra](https://github.com/michael-borck/narra) and
+[SlideStream](https://github.com/michael-borck/slide-stream) are M2.
 
 Every claim in the output traces back to a source you supplied.
 Unsupported claims are flagged, never quietly invented. No account, no
@@ -20,7 +21,7 @@ are M2. Product definition in
 M1 stories in [docs/STORIES.md](docs/STORIES.md).
 
 ```bash
-pip install sartor
+pip install "sartor[all]"   # document ingest/render + schema validation + PDF
 sartor init my-profile        # project folder + editable sartor.yaml
 sartor doctor                 # check the configured provider   (S-002)
 sartor ingest resume.pdf publications.md                        (S-003)

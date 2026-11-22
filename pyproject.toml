@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sartor"
-version = "0.0.1"
+version = "0.1.0"
 description = "Privacy-first resume tailoring: your evidence in, a tailored resume out — every claim traceable, nothing invented. Bring your own model (OpenAI-compatible, Ollama, Anthropic)."
 readme = "README.md"
 license = "MIT"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["resume", "cv", "tailoring", "ats", "career", "llm", "privacy", "cli"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
