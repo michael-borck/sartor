@@ -45,9 +45,9 @@ def test_help_lists_m1_commands():
 
 
 def test_stub_command_names_its_story():
-    result = runner.invoke(app, ["target", "add", "acme"])
+    result = runner.invoke(app, ["tailor", "acme"])
     assert result.exit_code == 3
-    assert "S-005" in result.output
+    assert "S-006" in result.output
 
 
 def test_init_creates_project(tmp_path: Path):

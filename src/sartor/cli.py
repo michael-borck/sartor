@@ -189,9 +189,49 @@ def profile_check() -> None:
 
 
 @target_app.command("add")
-def target_add(name: str = typer.Argument(...)) -> None:
+def target_add(
+    name: str = typer.Argument(...),
+    file: Annotated[
+        Path | None,
+        typer.Option("--file", "-f", help="Ad file (default: read stdin)."),
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Replace an existing target.")
+    ] = False,
+) -> None:
     """Parse a job advertisement into targets/NAME.json (S-005)."""
-    _not_yet("S-005", "target add")
+    from sartor.target import TargetError, add_target, load_target
+
+    project = _project_or_exit()
+    if file is not None:
+        if not file.is_file():
+            err_console.print(f"{file.name}: no such file")
+            raise typer.Exit(code=1)
+        ad_text = file.read_text(encoding="utf-8")
+        source_label = file.name
+    else:
+        ad_text = typer.get_text_stream("stdin").read()
+        source_label = "stdin"
+    provider = _provider_or_exit()
+    try:
+        add_target(
+            project,
+            name,
+            ad_text,
+            provider,
+            force=force,
+            source_label=source_label,
+        )
+    except TargetError as exc:
+        err_console.print(str(exc))
+        code = 2 if "exists" in str(exc) or "Invalid target name" in str(exc) else 1
+        raise typer.Exit(code=code) from exc
+    target = load_target(project, name)
+    console.print(
+        f"Target {name}: {len(target['must_haves'])} must-haves, "
+        f"{len(target['nice_to_haves'])} nice-to-haves"
+    )
+    console.print(f"Tailor: sartor tailor {name}")
 
 
 @app.command()

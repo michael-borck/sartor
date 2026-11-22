@@ -127,7 +127,7 @@ Acceptance:
 - [self] Non-ad text (e.g. an empty file) fails with "No requirements
   found in <file>", exit code 1, and writes nothing.
 - [unit] The raw ad text is stored beside the parse (`targets/acme.txt`).
-Status: todo
+Status: done
 UX:
 - Flow: `sartor target add NAME --file ad.txt` -> counts ("12 must-haves, 4 nice-to-haves") -> next step ("Tailor: sartor tailor NAME"). Re-adding the same name overwrites only with --force.
 - Surface: terminal command; stdin supported for pasting.
