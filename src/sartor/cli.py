@@ -298,7 +298,27 @@ def verify(
 @app.command()
 def report(name: str = typer.Argument(...)) -> None:
     """Write the coverage and gap report (S-008)."""
-    _not_yet("S-008", "report")
+    import json as _json
+
+    from sartor.report import ReportError, build_report
+
+    project = _project_or_exit()
+    if not (project / "exports" / name / "verify.json").is_file():
+        console.print("Not verified yet — running deterministic verify first.")
+    try:
+        out = build_report(project, name)
+    except ReportError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    coverage = _json.loads(
+        (project / "exports" / name / "coverage.json").read_text(encoding="utf-8")
+    )
+    c = coverage["counts"]
+    console.print(
+        f"Coverage: {c['evidenced']} evidenced, {c['weak']} weak, {c['gap']} gaps"
+    )
+    console.print(f"Report: {out}")
+    console.print(f"Render: sartor render {name}")
 
 
 @app.command()

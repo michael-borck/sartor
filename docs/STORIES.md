@@ -199,7 +199,7 @@ Acceptance:
 - [unit] Gaps are phrased only as "add evidence or accept the gap";
   no wording suggests inventing experience (checked against a banned-phrase list).
 - [self] Report numbers match `verify.json` counts for the same run.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor report NAME` -> writes files -> prints the three counts and the report path. Re-runnable after re-tailoring.
 - Surface: terminal command; report is a Markdown file the person keeps.
