@@ -5,9 +5,10 @@
 Privacy-first résumé tailoring. Give Sartor your real experience and one
 job advertisement; it selects, reorders and rewrites only what your
 evidence supports, then renders a finished résumé in Markdown, HTML, PDF
-and DOCX. Pitch-script and deck handoffs for
-[Narra](https://github.com/michael-borck/narra) and
-[SlideStream](https://github.com/michael-borck/slide-stream) are M2.
+and DOCX. Rendered bundles also include a pitch script for
+[Narra](https://github.com/michael-borck/narra), a deck for
+[SlideStream](https://github.com/michael-borck/slide-stream), and a
+`manifest.json` (M2, on `main`; PyPI 0.1.0 is the M1 release).
 
 Every claim in the output traces back to a source you supplied.
 Unsupported claims are flagged, never quietly invented. No account, no
@@ -28,10 +29,12 @@ sartor ingest resume.pdf publications.md                        (S-003)
 sartor profile build          # draft profile.json, then edit it (S-004)
 sartor target add acme --file ad.txt                            (S-005)
 sartor tailor acme && sartor verify acme && sartor render acme  (S-006…S-009)
+sartor render acme --theme modern   # or academic; else theme: in sartor.yaml
 ```
 
 Development: `uv sync && uv run pytest && uv run ruff check .`
 (On the exFAT Projects volume, point the env at the internal disk:
 `UV_PROJECT_ENVIRONMENT="$HOME/Library/Application Support/uv/envs/sartor" uv sync`.)
 
+MIT © Michael Borck.
 MIT © Michael Borck.

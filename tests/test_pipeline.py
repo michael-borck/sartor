@@ -65,15 +65,18 @@ def test_m1_pipeline(tmp_path: Path):
     try:
         written = render_bundle(project, "acme")
         assert (out_dir / "resume.pdf").is_file()
-        assert len(written) == 5
+        assert len(written) == 8
     except RenderError as exc:  # WeasyPrint system libs unavailable
         assert (out_dir / "resume.docx").is_file()
-        assert len(exc.written) == 4
+        assert len(exc.written) == 7
     for name in (
         "resume.md",
+        "pitch.md",
+        "deck.md",
         "resume.html",
         "resume.json",
         "resume.docx",
+        "manifest.json",
         "tailored.json",
         "verify.json",
         "report.md",

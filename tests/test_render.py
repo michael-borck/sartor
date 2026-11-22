@@ -1,4 +1,4 @@
-"""S-009: golden MD/HTML, bundle formats, flagged handling, partial PDF."""
+"""S-009/S-010..S-012: golden MD/HTML, bundle formats, handoffs, manifest."""
 
 from __future__ import annotations
 
@@ -97,15 +97,27 @@ def test_render_bundle(tmp_path: Path):
         with pytest.raises(RenderError) as exc_info:
             render_bundle(project, "acme")
         names = [p.name for p in exc_info.value.written]
-        assert names == ["resume.md", "resume.html", "resume.json", "resume.docx"]
+        assert names == [
+            "resume.md",
+            "pitch.md",
+            "deck.md",
+            "resume.html",
+            "resume.json",
+            "resume.docx",
+            "manifest.json",
+        ]
+        assert (project / "exports" / "acme" / "pitch.md").is_file()
         return
     written = render_bundle(project, "acme")
     assert [p.name for p in written] == [
         "resume.md",
+        "pitch.md",
+        "deck.md",
         "resume.html",
         "resume.json",
         "resume.docx",
         "resume.pdf",
+        "manifest.json",
     ]
     out = project / "exports" / "acme"
     md_text = (out / "resume.md").read_text(encoding="utf-8")

@@ -234,6 +234,85 @@ UX:
 - Words: "render" and "bundle"; theme named exactly `ats-plain`.
 - Access: HTML uses semantic headings and list markup; PDF text is selectable, never an image.
 
+## M2 Presentation: themes, handoffs, manifest, serve
+
+The same bundle, presentable in more than one way and usable beyond the
+terminal. Stories are built in order; `serve` depends on the rest.
+
+### S-010 Render in `modern` and `academic` themes
+As an applicant, I run `sartor render acme --theme modern` (or `academic`)
+and get the same content in a distinct visual style; `ats-plain` stays
+the parseable default.
+Screens: snapshots/render/modern/resume.html, snapshots/render/academic/resume.html
+Depends: S-009
+Acceptance:
+- [snap] `modern` and `academic` HTML each match golden files and differ
+  from `ats-plain` only in presentation (same headings, same bullets).
+- [self] Markdown and JSON Resume outputs are theme-invariant.
+- [self] With no `--theme`, render uses `theme:` from `sartor.yaml`;
+  an unknown theme fails naming the three allowed values, exit code 1,
+  and writes nothing.
+- [snap] `ats-plain` goldens are unchanged from M1.
+Status: done
+UX:
+- Flow: `sartor render NAME [--theme modern|academic|ats-plain]`.
+- Surface: terminal command; documents carry the design.
+- Words: theme names exactly `ats-plain`, `modern`, `academic`.
+- Access: all themes keep semantic headings and selectable PDF text.
+
+### S-011 Write handoff files `pitch.md` and `deck.md`
+As an applicant, I find `pitch.md` (a first-person narrative script for
+Narra) and `deck.md` (one claim per slide for SlideStream) in my bundle,
+built only from non-flagged bullets.
+Screens: snapshots/render/ats-plain/pitch.md, snapshots/render/ats-plain/deck.md
+Depends: S-009
+Acceptance:
+- [snap] `pitch.md` matches a golden file: name/label opener, summary,
+  one paragraph per role, skills line; no fact absent from the tailored model.
+- [unit] Flagged bullets appear in neither handoff; the omission count is
+  recorded in an HTML comment at the top of each file.
+- [snap] `deck.md` matches a golden file: every slide starts with a `#`
+  heading (SlideStream deck format), one claim per bullet.
+- [self] Handoffs are written even when PDF rendering fails (partial bundle).
+Status: done
+UX:
+- Flow: part of `sartor render NAME`; listed with the other written files.
+- Words: "pitch" and "deck"; file names exactly `pitch.md`, `deck.md`.
+- Access: plain Markdown, readable as-is without Narra/SlideStream.
+
+### S-012 Write `manifest.json` for every bundle
+As an applicant (or auditor), I open `exports/acme/manifest.json` and can
+see exactly what produced this bundle and verify every file's hash.
+Screens: none (CLI)
+Depends: S-009
+Acceptance:
+- [self] Manifest records sartor version, target, theme, provider/model
+  (no secrets), input hashes (profile, target, tailored, each source),
+  verify counts when `verify.json` exists (else null), and for every
+  other output file its name, sha256, and byte size.
+- [unit] Every recorded output hash matches the file on disk.
+- [self] Manifest is written even when PDF/DOCX rendering fails, listing
+  only the files actually written.
+Status: done
+UX:
+- Flow: part of `sartor render NAME`; written last, listed with the bundle.
+- Words: "manifest"; keys are plain names, no timestamps needed to verify.
+- Access: pretty-printed JSON, greppable.
+
+### S-013 Review a project in the browser with `sartor serve`
+As an applicant, I run `sartor serve` and review my profile, targets,
+tailoring with evidence flags inline, and download bundles — keys stay
+server-side.
+Screens: serve home, profile review, target review, bundle download
+Depends: S-010, S-011, S-012
+Acceptance:
+- [self] `sartor serve` starts on localhost, lists the project's sources,
+  profile status, and targets without any network egress of resume text.
+- [self] A tailored target page shows each bullet's verdict word from
+  `verify.json` beside the bullet (never colour alone).
+- [manual] A person downloads `resume.pdf` and `pitch.md` from the bundle page.
+Status: todo
+
 ## Seed data
 
 `examples/jane-doe/` ships in the repo and drives every `[self]` and
@@ -251,8 +330,7 @@ UX:
 
 ## Later
 
-- M2: `sartor serve` web UI; `modern` and `academic` themes; handoffs
-  `pitch.md` (Narra) and `deck.md` (SlideStream); `manifest.json`.
+- M2 remainder: `sartor serve` web UI (S-013).
 - M3: SFIA / O*NET / ESCO mapping (user-supplied data only); opt-in
   web-search grounding with derived queries only.
 - M4: Tauri desktop shell over `serve`; signed installers.

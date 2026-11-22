@@ -1,9 +1,10 @@
 """Sartor CLI.
 
-M1 commands (docs/STORIES.md): init (S-001), doctor (S-002),
-ingest (S-003), profile build/check (S-004), target add (S-005),
-tailor (S-006), verify (S-007), report (S-008), render (S-009).
-Only ``init`` is implemented in this scaffold; the rest say so.
+Commands (docs/STORIES.md): the M1 core loop — init (S-001),
+doctor (S-002), ingest (S-003), profile build/check (S-004),
+target add (S-005), tailor (S-006), verify (S-007), report
+(S-008), render (S-009) — plus M2 render extras: themes (S-010),
+pitch/deck handoffs (S-011), and bundle manifest (S-012).
 """
 
 from __future__ import annotations
@@ -325,15 +326,26 @@ def report(name: str = typer.Argument(...)) -> None:
 def render(
     name: str = typer.Argument(...),
     theme: Annotated[
-        str, typer.Option("--theme", help="Document theme (M1: ats-plain).")
-    ] = "ats-plain",
+        str | None,
+        typer.Option(
+            "--theme",
+            help="ats-plain (default), modern, or academic; else sartor.yaml theme.",
+        ),
+    ] = None,
 ) -> None:
-    """Render the export bundle (MD, HTML, PDF, DOCX, JSON) (S-009)."""
+    """Render the export bundle incl. pitch, deck, manifest (S-009..S-012)."""
+    from sartor.config import load_config
     from sartor.render import RenderError, render_bundle
 
     project = _project_or_exit()
+    selected_theme = theme
+    if selected_theme is None:
+        try:
+            selected_theme = str(load_config(start=project).get("theme") or "ats-plain")
+        except Exception:
+            selected_theme = "ats-plain"
     try:
-        written = render_bundle(project, name, theme=theme)
+        written = render_bundle(project, name, theme=selected_theme)
     except RenderError as exc:
         for path in exc.written:
             console.print(f"Wrote {path.name}")
