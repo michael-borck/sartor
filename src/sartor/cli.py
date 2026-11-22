@@ -322,6 +322,23 @@ def report(name: str = typer.Argument(...)) -> None:
 
 
 @app.command()
-def render(name: str = typer.Argument(...)) -> None:
+def render(
+    name: str = typer.Argument(...),
+    theme: Annotated[
+        str, typer.Option("--theme", help="Document theme (M1: ats-plain).")
+    ] = "ats-plain",
+) -> None:
     """Render the export bundle (MD, HTML, PDF, DOCX, JSON) (S-009)."""
-    _not_yet("S-009", "render")
+    from sartor.render import RenderError, render_bundle
+
+    project = _project_or_exit()
+    try:
+        written = render_bundle(project, name, theme=theme)
+    except RenderError as exc:
+        for path in exc.written:
+            console.print(f"Wrote {path.name}")
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    for path in written:
+        console.print(f"Wrote {path.name}")
+    console.print(f"Bundle: exports/{name}/")

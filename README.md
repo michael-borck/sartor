@@ -13,8 +13,9 @@ Unsupported claims are flagged, never quietly invented. No account, no
 telemetry; bring your own model (any OpenAI-compatible endpoint —
 including local Ollama — or Anthropic).
 
-**Status:** M1 in development (scaffold; `sartor init` works, the
-pipeline lands story by story). Product definition in
+**Status:** M1 core loop implemented (CLI: ingest → profile → target →
+tailor → verify → report → render). Web UI, extra themes, and handoffs
+are M2. Product definition in
 [docs/BRIEF.md](docs/BRIEF.md), design in [docs/SPEC.md](docs/SPEC.md),
 M1 stories in [docs/STORIES.md](docs/STORIES.md).
 

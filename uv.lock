@@ -2282,6 +2282,7 @@ dev = [
     { name = "python-docx" },
     { name = "ruff" },
     { name = "twine" },
+    { name = "weasyprint" },
 ]
 
 [package.metadata]
@@ -2316,6 +2317,7 @@ dev = [
     { name = "python-docx", specifier = ">=1.1.0" },
     { name = "ruff", specifier = ">=0.12.0" },
     { name = "twine", specifier = ">=6.1.0" },
+    { name = "weasyprint", specifier = ">=60.0" },
 ]
 
 [[package]]

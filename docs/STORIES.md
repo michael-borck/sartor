@@ -226,7 +226,7 @@ Acceptance:
 - [self] `resume.json` is the tailored model re-exported as valid
   JSON Resume (evidence fields under `meta.sartor`, schema still valid).
 - [manual] A person opens the PDF and DOCX and can submit either as-is.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor render NAME` -> one line per file written -> "Bundle: exports/acme/". Re-rendering is safe and overwrites only rendered files.
 - Surface: terminal command; documents carry the design, not the terminal.

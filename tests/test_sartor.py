@@ -45,9 +45,9 @@ def test_help_lists_m1_commands():
 
 
 def test_stub_command_names_its_story():
-    result = runner.invoke(app, ["render", "acme"])
-    assert result.exit_code == 3
-    assert "S-009" in result.output
+    # All M1 commands are implemented; unknown commands fail cleanly.
+    result = runner.invoke(app, ["serve"])
+    assert result.exit_code != 0
 
 
 def test_init_creates_project(tmp_path: Path):
