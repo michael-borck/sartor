@@ -261,15 +261,38 @@ def tailor(name: str = typer.Argument(...)) -> None:
 @app.command()
 def verify(
     name: str = typer.Argument(...),
-    strict: bool = typer.Option(
-        False, "--strict", help="Drop unsupported bullets instead of flagging."
-    ),
-    llm: bool = typer.Option(
-        False, "--llm", help="Add an entailment pass (network call)."
-    ),
+    strict: Annotated[
+        bool,
+        typer.Option("--strict", help="Drop unsupported bullets instead of flagging."),
+    ] = False,
+    llm: Annotated[
+        bool, typer.Option("--llm", help="Add an entailment pass (network call).")
+    ] = False,
 ) -> None:
     """Check every bullet against its evidence (S-007)."""
-    _not_yet("S-007", "verify")
+    import json as _json
+
+    from sartor.verify import VerifyError, verify_resume
+
+    project = _project_or_exit()
+    provider = _provider_or_exit() if llm else None
+    try:
+        out = verify_resume(project, name, strict=strict, llm=llm, provider=provider)
+    except VerifyError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    data = _json.loads(out.read_text(encoding="utf-8"))
+    for bullet in data["bullets"]:
+        console.print(f"{bullet['verdict']}: {bullet['path']} — {bullet['text'][:70]}")
+    counts = data["counts"]
+    console.print(
+        f"supported {counts['supported']}, weak {counts['weak']}, "
+        f"unsupported {counts['unsupported']}"
+        + (f", dropped {data['dropped']}" if strict else "")
+    )
+    console.print(f"Report: sartor report {name}")
+    if counts["unsupported"]:
+        raise typer.Exit(code=1)
 
 
 @app.command()

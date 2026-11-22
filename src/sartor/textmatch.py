@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 _WORD_RE = re.compile(r"[a-z0-9+#.]+")
-_NUMBER_RE = re.compile(r"\b\d+(?:[.,]\d+)?%?\b")
+_NUMBER_RE = re.compile(r"\b\d+(?:[.,]\d+)?%?(?![\d%])")
 _DATE_RE = re.compile(
     r"\b(?:\d{4}-\d{2}(?:-\d{2})?|\d{4}|\d{1,2}/\d{4}|"
     r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4})\b",

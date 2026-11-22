@@ -178,7 +178,7 @@ Acceptance:
   dropped), 0 only when every bullet is `supported` or `weak`.
 - [self] `--llm` adds an entailment pass (bullet follows from its spans);
   without it, verify makes no network call.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor verify NAME [--strict] [--llm]` -> per-bullet lines -> counts by verdict -> "Render: sartor render NAME". Non-destructive without --strict.
 - Surface: terminal command.
