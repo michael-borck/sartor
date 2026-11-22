@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "sartor"
 version = "0.0.1"
-description = "Privacy-first résumé tailoring: your evidence in, a tailored résumé out — every claim traceable, nothing invented. Bring your own model (OpenAI-compatible, Ollama, Anthropic)."
+description = "Privacy-first resume tailoring: your evidence in, a tailored resume out — every claim traceable, nothing invented. Bring your own model (OpenAI-compatible, Ollama, Anthropic)."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["resume", "cv", "tailoring", "ats", "career", "llm", "privacy", "cli"]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 2 - Pre-Alpha",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
@@ -27,10 +27,38 @@ classifiers = [
     "Topic :: Text Processing",
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "requests>=2.31.0",
+    "pyyaml>=6.0.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+# Document ingest + render (S-003, S-009).
+import = [
+    "pypdf>=4.0.0",
+    "python-docx>=1.1.0",
+    "beautifulsoup4>=4.12.0",
+]
+# PDF from the HTML output (S-009); heavy, stays optional.
+pdf = ["weasyprint>=60.0"]
+# Anthropic native provider (S-002). OpenAI-compatible needs no extra.
+anthropic = ["anthropic>=0.40.0"]
+# JSON Resume schema validation (S-004).
+schema = ["jsonschema>=4.20.0"]
+all = [
+    "pypdf>=4.0.0",
+    "python-docx>=1.1.0",
+    "beautifulsoup4>=4.12.0",
+    "weasyprint>=60.0",
+    "anthropic>=0.40.0",
+    "jsonschema>=4.20.0",
+]
 
 [project.scripts]
-sartor = "sartor.cli:main"
+sartor = "sartor.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/michael-borck/sartor"
@@ -42,3 +70,44 @@ packages = ["src/sartor"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["dist", "**/._*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29.4",
+    "build>=1.2.2",
+    "httpx>=0.27.0",
+    "pytest>=8.4.0",
+    "ruff>=0.12.0",
+    "twine>=6.1.0",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+exclude = ["**/._*"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["sartor"]
+
+[tool.basedpyright]
+include = ["src", "tests"]
+exclude = ["**/__pycache__", "**/._*"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.10"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true

@@ -1,8 +1,8 @@
-"""Sartor — privacy-first résumé tailoring.
+"""Sartor — privacy-first resume tailoring.
 
-Pre-release placeholder (0.0.1): reserves the PyPI name while M1
-(ingest → distil → tailor → verify → render) is built. See
-docs/BRIEF.md and docs/SPEC.md in the repository.
+Your evidence in, a tailored resume out: every claim traceable to a
+source span, nothing invented. See docs/BRIEF.md, docs/SPEC.md and
+docs/STORIES.md in the repository.
 """
 
 __version__ = "0.0.1"

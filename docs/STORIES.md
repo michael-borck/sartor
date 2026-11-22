@@ -34,7 +34,7 @@ Acceptance:
   keys are read only from `${ENV_VAR}` references.
 - [unit] A config naming any provider other than `openai-compatible` or
   `anthropic` is rejected, naming the two allowed values.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor init DIR` -> files written -> prints next step ("Add sources: sartor ingest FILE…"). Ctrl-C leaves nothing half-written.
 - Surface: terminal command (no interactive prompts in M1).
