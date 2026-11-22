@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sartor"
+version = "0.0.1"
+description = "Privacy-first résumé tailoring: your evidence in, a tailored résumé out — every claim traceable, nothing invented. Bring your own model (OpenAI-compatible, Ollama, Anthropic)."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Michael Borck", email = "michael.borck@curtin.edu.au" },
+]
+keywords = ["resume", "cv", "tailoring", "ats", "career", "llm", "privacy", "cli"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing",
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+sartor = "sartor.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/michael-borck/sartor"
+Repository = "https://github.com/michael-borck/sartor"
+Issues = "https://github.com/michael-borck/sartor/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sartor"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["dist", "**/._*"]
