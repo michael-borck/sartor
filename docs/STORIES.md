@@ -79,7 +79,7 @@ Acceptance:
 - [self] An unreadable or unsupported file names the file and the
   supported extensions, exit code 1; other files in the same run still ingest.
 - [unit] Originals are never modified; extracted text lives in the project.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor ingest FILE…` -> one line per file ("resume.pdf: 42 spans") -> summary. Re-running is the way back; it is idempotent.
 - Surface: terminal command.

@@ -1,0 +1,8 @@
+# Seed example project (docs/STORIES.md). Tests drive a FakeProvider,
+# so no server is needed; this config documents the default local setup.
+provider: openai-compatible
+base_url: http://localhost:11434/v1
+model: null
+api_key: null
+timeout: 300
+theme: ats-plain

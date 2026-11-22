@@ -26,6 +26,15 @@ def is_project(path: Path) -> bool:
     return (path / "sartor.yaml").is_file()
 
 
+def find_project(start: Path | None = None) -> Path | None:
+    """Walk up from ``start`` looking for a Sartor project folder."""
+    current = (Path.cwd() if start is None else start).resolve()
+    for candidate in (current, *current.parents):
+        if is_project(candidate):
+            return candidate
+    return None
+
+
 def init_project(path: Path) -> Path:
     """Create a project at ``path``. Refuses to touch an existing one."""
     if is_project(path):

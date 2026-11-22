@@ -1,0 +1,26 @@
+Senior Data Analyst — Acme Corp (Perth, hybrid)
+
+Acme Corp is hiring a Senior Data Analyst to own reporting for our
+retail network.
+
+Essential (must have):
+1. 5+ years in a data analyst role.
+2. Expert SQL, including window functions.
+3. Python for data work (pandas or Polars).
+4. Dashboard delivery in Tableau or Power BI.
+5. Experience consolidating data from multiple source systems.
+6. Stakeholder communication with non-technical managers.
+7. Git-based workflow for analytics code.
+8. dbt in production.
+9. Kubernetes operations experience.
+10. Go programming for data services.
+11. A current Australian Government security clearance.
+12. Retail or logistics domain experience.
+
+Desirable (nice to have):
+1. Mentoring junior analysts.
+2. BigQuery or Snowflake.
+3. Running training workshops.
+4. A/B testing experience.
+
+Selection criteria: address each essential point with an example.

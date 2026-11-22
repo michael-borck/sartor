@@ -1,0 +1,6 @@
+Publications and talks — Jane Doe
+
+Doe, J. (2023). Dashboards managers actually open. Perth Data Meetup talk.
+
+Doe, J., & Smith, R. (2022). Consolidating retail sales data across 14
+stores: a field report. Internal ShopFront Retail white paper.

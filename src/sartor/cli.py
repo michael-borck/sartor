@@ -97,9 +97,37 @@ def doctor() -> None:
 
 
 @app.command()
-def ingest(files: list[Path] = typer.Argument(...)) -> None:
+def ingest(files: list[Path] = typer.Argument(None)) -> None:  # noqa: B008
     """Ingest source files into the project (S-003)."""
-    _not_yet("S-003", "ingest")
+    from sartor.ingest import IngestError, ingest_file, span_count
+    from sartor.project import find_project
+
+    if not files:
+        err_console.print("No files given: sartor ingest FILE…")
+        raise typer.Exit(code=2)
+    project = find_project()
+    if project is None:
+        err_console.print(
+            "Not in a Sartor project: run `sartor init DIR` first, "
+            "then run this inside it"
+        )
+        raise typer.Exit(code=2)
+    total_spans = 0
+    failures = 0
+    for path in files:
+        try:
+            out = ingest_file(path, project)
+        except IngestError as exc:
+            err_console.print(str(exc))
+            failures += 1
+            continue
+        count = span_count(out)
+        total_spans += count
+        console.print(f"{path.name}: {count} spans")
+    ok = len(files) - failures
+    console.print(f"Ingested {ok} of {len(files)} files, {total_spans} spans")
+    if failures:
+        raise typer.Exit(code=1)
 
 
 @profile_app.command("build")

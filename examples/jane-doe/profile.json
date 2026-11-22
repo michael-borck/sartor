@@ -1,0 +1,59 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
+  "basics": {
+    "name": "Jane Doe",
+    "label": "Data Analyst",
+    "email": "jane.doe@example.com",
+    "summary": "Data analyst with 6 years of experience turning operational data into decisions for retail and logistics teams.",
+    "location": {"city": "Perth", "countryCode": "AU"}
+  },
+  "work": [
+    {
+      "name": "ShopFront Retail",
+      "position": "Senior Data Analyst",
+      "startDate": "2021-03-01",
+      "highlights": [
+        "Built a SQL pipeline consolidating 14 stores of sales data into one daily model.",
+        "Shipped a Tableau dashboard used by 40 store managers every Monday.",
+        "Cut weekly reporting time from 6 hours to 1 hour by automating extracts in Python.",
+        "Mentored 2 junior analysts through their first production dashboards."
+      ]
+    },
+    {
+      "name": "QuickFreight Logistics",
+      "position": "Data Analyst",
+      "startDate": "2019-06-01",
+      "endDate": "2021-02-28",
+      "highlights": [
+        "Modelled delivery delays in Python and found the top 3 causes of late freight.",
+        "Maintained Excel and Power BI reports for the operations team."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Curtin University",
+      "area": "Business Information Systems",
+      "studyType": "Bachelor of Commerce",
+      "endDate": "2018-12-01"
+    }
+  ],
+  "skills": [
+    {"name": "SQL", "keywords": ["PostgreSQL", "BigQuery"]},
+    {"name": "Python", "keywords": ["pandas", "matplotlib"]},
+    {"name": "Dashboards", "keywords": ["Tableau", "Power BI"]},
+    {"name": "Tooling", "keywords": ["Git", "dbt basics"]}
+  ],
+  "publications": [
+    {
+      "name": "Dashboards managers actually open",
+      "publisher": "Perth Data Meetup",
+      "releaseDate": "2023-01-01"
+    },
+    {
+      "name": "Consolidating retail sales data across 14 stores: a field report",
+      "publisher": "ShopFront Retail",
+      "releaseDate": "2022-01-01"
+    }
+  ]
+}

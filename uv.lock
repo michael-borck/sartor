@@ -2273,9 +2273,13 @@ schema = [
 [package.dev-dependencies]
 dev = [
     { name = "basedpyright" },
+    { name = "beautifulsoup4" },
     { name = "build" },
     { name = "httpx" },
+    { name = "jsonschema" },
+    { name = "pypdf" },
     { name = "pytest" },
+    { name = "python-docx" },
     { name = "ruff" },
     { name = "twine" },
 ]
@@ -2303,9 +2307,13 @@ provides-extras = ["import", "pdf", "schema", "all"]
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright", specifier = ">=1.29.4" },
+    { name = "beautifulsoup4", specifier = ">=4.12.0" },
     { name = "build", specifier = ">=1.2.2" },
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "jsonschema", specifier = ">=4.20.0" },
+    { name = "pypdf", specifier = ">=4.0.0" },
     { name = "pytest", specifier = ">=8.4.0" },
+    { name = "python-docx", specifier = ">=1.1.0" },
     { name = "ruff", specifier = ">=0.12.0" },
     { name = "twine", specifier = ">=6.1.0" },
 ]
