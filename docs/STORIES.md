@@ -105,7 +105,7 @@ Acceptance:
 - [self] `sartor profile check` validates a hand-edited profile and
   points at the first invalid field by path (`work[2].startDate`).
 - [manual] A person can open the draft, fix a date, and `profile check` passes.
-Status: todo
+Status: done
 UX:
 - Flow: `sartor profile build` -> progress per source -> "Wrote profile.json — review it, then: sartor profile check". Way back: the file is plain JSON; delete and rebuild.
 - Surface: terminal command; editing happens in the person's own editor.

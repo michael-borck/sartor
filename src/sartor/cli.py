@@ -9,7 +9,7 @@ Only ``init`` is implemented in this scaffold; the rest say so.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -37,6 +37,30 @@ err_console = Console(stderr=True)
 def _not_yet(story: str, what: str) -> None:
     err_console.print(f"Not yet implemented: {what} ({story}, docs/STORIES.md)")
     raise typer.Exit(code=3)
+
+
+def _project_or_exit() -> Path:
+    from sartor.project import find_project
+
+    project = find_project()
+    if project is None:
+        err_console.print(
+            "Not in a Sartor project: run `sartor init DIR` first, "
+            "then run this inside it"
+        )
+        raise typer.Exit(code=2)
+    return project
+
+
+def _provider_or_exit() -> Any:
+    from sartor.config import ConfigurationError, load_config
+    from sartor.providers import ProviderError, get_provider
+
+    try:
+        return get_provider(load_config())
+    except (ConfigurationError, ProviderError) as exc:
+        err_console.print(f"config: {exc}")
+        raise typer.Exit(code=1) from exc
 
 
 def _version_callback(value: bool) -> None:
@@ -131,15 +155,37 @@ def ingest(files: list[Path] = typer.Argument(None)) -> None:  # noqa: B008
 
 
 @profile_app.command("build")
-def profile_build() -> None:
+def profile_build(
+    force: Annotated[
+        bool, typer.Option("--force", help="Overwrite an existing profile.json.")
+    ] = False,
+) -> None:
     """Draft profile.json from the sources (S-004)."""
-    _not_yet("S-004", "profile build")
+    from sartor.profile import ProfileError, build_profile
+
+    project = _project_or_exit()
+    provider = _provider_or_exit()
+    try:
+        out = build_profile(project, provider, force=force)
+    except ProfileError as exc:
+        err_console.print(str(exc))
+        code = 2 if "exists" in str(exc) else 1
+        raise typer.Exit(code=code) from exc
+    console.print(f"Wrote {out.name} — review it, then: sartor profile check")
 
 
 @profile_app.command("check")
 def profile_check() -> None:
     """Validate a hand-edited profile.json (S-004)."""
-    _not_yet("S-004", "profile check")
+    from sartor.profile import ProfileError, check_profile
+
+    project = _project_or_exit()
+    try:
+        check_profile(project)
+    except ProfileError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    console.print("profile.json: ok")
 
 
 @target_app.command("add")
