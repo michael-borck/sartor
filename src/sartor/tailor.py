@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,29 @@ SYSTEM_PROMPT = (
     "Reply with one JSON plan object."
 )
 
+TAILOR_VOICES = ("standard", "framework")
+_LEVEL_CLAIM_RE = re.compile(
+    r"\b(?:sfia\s*)?(?:level|lvl)\s*(?:[:#-]\s*)?"
+    r"(?:[0-9]+(?:\.[0-9]+)?|one|two|three|four|five|six|seven)\b"
+    r"|\bsfia\s*[0-9]\b",
+    re.IGNORECASE,
+)
+
+
+def _contains_level_claim(text: str) -> bool:
+    return _LEVEL_CLAIM_RE.search(text) is not None
+
+
+def _validate_framework_voice(framework_name: str | None, voice: str) -> None:
+    if voice not in TAILOR_VOICES:
+        raise TailorError(
+            f"unknown tailor voice {voice!r}; expected standard or framework"
+        )
+    if voice == "framework" and not framework_name:
+        raise TailorError("--voice framework needs --framework NAME")
+    if framework_name and voice != "framework":
+        raise TailorError("--framework needs --voice framework")
+
 
 class TailorError(Exception):
     """Raised when tailoring cannot produce an evidence-linked model."""
@@ -58,6 +82,8 @@ def build_tailor_prompt(
     profile: dict[str, Any],
     target: dict[str, Any],
     spans: dict[str, str],
+    *,
+    framework_context: str | None = None,
 ) -> str:
     """The exact prompt ``tailor_resume`` sends (exposed for recorded tests)."""
     lines = [
@@ -69,15 +95,21 @@ def build_tailor_prompt(
         "List sections/entries in the order they should appear. Omit "
         "entries irrelevant to the target. For entries without "
         "highlights, omit the highlights key to keep them unchanged.",
-        "",
-        "TARGET:",
-        json.dumps(target, ensure_ascii=False),
-        "",
-        "PROFILE (JSON Resume; indexes below refer to this):",
-        json.dumps(profile, ensure_ascii=False),
-        "",
-        "SOURCE SPANS (cite these ids as evidence):",
     ]
+    if framework_context:
+        lines.extend(["", framework_context])
+    lines.extend(
+        [
+            "",
+            "TARGET:",
+            json.dumps(target, ensure_ascii=False),
+            "",
+            "PROFILE (JSON Resume; indexes below refer to this):",
+            json.dumps(profile, ensure_ascii=False),
+            "",
+            "SOURCE SPANS (cite these ids as evidence):",
+        ]
+    )
     lines.extend(f"[{span_id}] {text}" for span_id, text in spans.items())
     return "\n".join(lines)
 
@@ -106,8 +138,16 @@ def _derive_evidence(
     return merged[:5]
 
 
-def tailor_resume(project: Path, target_name: str, provider: Provider) -> Path:
+def tailor_resume(
+    project: Path,
+    target_name: str,
+    provider: Provider,
+    *,
+    framework_name: str | None = None,
+    voice: str = "standard",
+) -> Path:
     """Write ``exports/<target>/tailored.json``."""
+    _validate_framework_voice(framework_name, voice)
     try:
         profile = check_profile(project)
     except ProfileError as exc:
@@ -118,9 +158,27 @@ def tailor_resume(project: Path, target_name: str, provider: Provider) -> Path:
         raise TailorError(str(exc)) from exc
 
     spans = all_spans(load_sources(project))
+    framework_context: str | None = None
+    if framework_name:
+        from sartor.frameworks import FrameworkError, framework_voice_context
+
+        try:
+            framework_context = framework_voice_context(
+                project, target_name, framework_name
+            )
+        except FrameworkError as exc:
+            raise TailorError(str(exc)) from exc
     try:
         plan = parse_model_json(
-            provider.chat(SYSTEM_PROMPT, build_tailor_prompt(profile, target, spans))
+            provider.chat(
+                SYSTEM_PROMPT,
+                build_tailor_prompt(
+                    profile,
+                    target,
+                    spans,
+                    framework_context=framework_context,
+                ),
+            )
         )
     except ModelJsonError as exc:
         raise TailorError(str(exc)) from exc
@@ -139,7 +197,11 @@ def tailor_resume(project: Path, target_name: str, provider: Provider) -> Path:
     basics = copy.deepcopy(profile.get("basics") or {})
     summary = plan.get("summary")
     if isinstance(summary, str) and summary.strip():
-        if numbers(summary) <= allowed_numbers and dates(summary) <= allowed_dates:
+        if (
+            numbers(summary) <= allowed_numbers
+            and dates(summary) <= allowed_dates
+            and not (voice == "framework" and _contains_level_claim(summary))
+        ):
             basics["summary"] = summary.strip()
     tailored["basics"] = basics
 
@@ -191,6 +253,9 @@ def tailor_resume(project: Path, target_name: str, provider: Provider) -> Path:
                 ):
                     bullets_dropped += 1
                     continue
+                if voice == "framework" and _contains_level_claim(text):
+                    bullets_dropped += 1
+                    continue
                 evidence = [
                     str(e) for e in bullet.get("evidence", []) if str(e) in spans
                 ]
@@ -221,15 +286,20 @@ def tailor_resume(project: Path, target_name: str, provider: Provider) -> Path:
         for section in COPY_SECTIONS
         if isinstance(profile.get(section), list)
     }
-    tailored["meta"] = {
-        "sartor": {
-            "target": target_name,
-            "kept": kept,
-            "dropped": dropped,
-            "bullets_kept": bullets_kept,
-            "bullets_dropped": bullets_dropped,
-        }
+    sartor_meta: dict[str, Any] = {
+        "target": target_name,
+        "kept": kept,
+        "dropped": dropped,
+        "bullets_kept": bullets_kept,
+        "bullets_dropped": bullets_dropped,
     }
+    if framework_name:
+        sartor_meta["framework"] = {
+            "name": framework_name,
+            "voice": voice,
+            "display": "voice-only",
+        }
+    tailored["meta"] = {"sartor": sartor_meta}
 
     out_dir = project / "exports" / target_name
     out_dir.mkdir(parents=True, exist_ok=True)

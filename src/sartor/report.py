@@ -213,6 +213,28 @@ def _render_md(
             lines.append("")
             for row in target_gaps:
                 lines.append(f"- {row.get('code')} {row.get('name')} — {GAP_PHRASE}.")
+    for statement in coverage.get("framework_statements", []) or []:
+        lines.extend(
+            [
+                "",
+                f"## Framework statements — {statement.get('framework', '')}",
+                "",
+            ]
+        )
+        counts = statement.get("counts") or {}
+        lines.append(
+            f"Display {statement.get('display', 'code')}; "
+            f"{counts.get('statements', 0)} evidence statements across "
+            f"{counts.get('skills_with_statements', 0)} skills. "
+            "Levels stay internal in the statement JSON."
+        )
+        for row in statement.get("skills", []) or []:
+            statements = row.get("statements", []) or []
+            if not statements:
+                continue
+            lines.extend(["", f"### {row.get('code')} — {row.get('name')}", ""])
+            for item in statements:
+                lines.append(f"- {item.get('text', '')}")
     lines.extend(["", "## Keywords (ATS)", ""])
     lines.append("| Keyword | Present |")
     lines.append("| --- | --- |")
@@ -250,6 +272,17 @@ def build_report(project: Path, target_name: str) -> Path:
         except (OSError, json.JSONDecodeError):
             continue
     coverage["frameworks"] = mappings
+    statements: list[dict[str, Any]] = []
+    for statement_path in sorted(
+        (project / "exports" / target_name).glob("statement-*.json")
+    ):
+        try:
+            statement = json.loads(statement_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(statement, dict):
+            statements.append(statement)
+    coverage["framework_statements"] = statements
     markdown = _render_md(coverage, verify, target)
     lowered = markdown.lower()
     for phrase in BANNED_PHRASES:

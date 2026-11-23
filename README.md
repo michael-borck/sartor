@@ -19,7 +19,8 @@ including local Ollama — or Anthropic).
 tailor → verify → report → render) plus M2: `modern`/`academic`
 themes, pitch/deck handoffs, bundle manifest, and the local web UI
 (`sartor serve`). M3 is implemented on `main` (unreleased):
-user-supplied framework mapping and opt-in search grounding. Product definition in
+user-supplied framework mapping, framework-voiced evidence statements,
+and opt-in search grounding. Product definition in
 [docs/BRIEF.md](docs/BRIEF.md), design in [docs/SPEC.md](docs/SPEC.md),
 stories in [docs/STORIES.md](docs/STORIES.md).
 
@@ -35,6 +36,8 @@ sartor render acme --theme modern   # or academic; else theme: in sartor.yaml
 sartor serve                        # web UI at http://127.0.0.1:5384/ (needs sartor[serve])
 sartor framework add sfia.csv --name sfia --kind sfia   # your own data (S-014)
 sartor framework map acme --framework sfia              # by-code alignment (S-015)
+sartor framework statement acme --framework sfia        # evidence statement, no level by default (S-018)
+sartor tailor acme --framework sfia --voice framework   # framework voice only; no code/level (S-018)
 sartor research acme --enable-search                    # cited context, opt-in (S-016)
 ```
 

@@ -25,13 +25,18 @@ Every noun and verb in CLI output, docs, and errors uses these names.
 | bundle | The rendered files for one target in `exports/<target>/` | export package, output set |
 | provider | The LLM backend: `openai-compatible` or `anthropic` (Ollama is the former at localhost) | vendor, engine, AI brain |
 | framework | A user-supplied skill vocabulary (SFIA, O*NET, ESCO, AQF, custom) stored in `frameworks/<name>.json` | bundled data, taxonomy pack |
-| framework skill | One coded entry in a framework: code, name, optional level/description/keywords | competency (unless the framework says so) |
+| framework skill | One coded entry in a framework: code, name, optional level/descriptor/keywords; one code may have several level rows | competency (unless the framework says so) |
+| level descriptor | The user-supplied wording that distinguishes one level of a framework skill | grade rubric, score text |
+| suggested level | A deterministic internal suggestion from descriptor-specific evidence; never a formal assessment | assessed level, rating |
+| confirmed level | A level the applicant explicitly confirms they stand behind | certified level, assessed level |
+| framework voice | Optional resume wording that uses supported framework names/keywords and evidence of scope, autonomy, complexity, influence, and outcomes; it never prints a level | keyword stuffing, spin |
+| framework statement | A separate evidence-linked statement by framework skill; display is `none`, `code`, or `code-level` (default `code`) | capability claim, assessment |
 | mapping | Per-code profile/target statuses and alignment for one target + framework | score, match grade |
 | alignment | matched / target gap / profile only / neither, per framework code | fit |
 | grounding | Opt-in web search whose results are cited context for a target | evidence, research proof |
 | derived query | A search query built only from target fields (title, organisation, keywords) | resume query |
 
 Verbs, one per action: `init`, `ingest`, `build`/`check` (profile),
-`add` (target/framework), `tailor`, `verify`, `report`, `render`, `doctor`, `serve`, `map`, `research`.
+`add` (target/framework), `tailor`, `verify`, `report`, `render`, `doctor`, `serve`, `map`, `confirm`, `statement`, `research`.
 Rewriting a bullet is "rephrase"; Sartor never "enhances" or "improves"
 a claim.

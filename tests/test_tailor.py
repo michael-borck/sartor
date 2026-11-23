@@ -71,6 +71,81 @@ def test_tailor_selects_rephrases_and_links(tmp_path: Path):
     )
 
 
+class _CaptureProvider(FakeProvider):
+    def __init__(self, reply: str):
+        super().__init__({})
+        self.reply = reply
+
+    def chat(self, system: str, prompt: str) -> str:
+        self.calls.append((system, prompt))
+        return self.reply
+
+
+def test_tailor_framework_voice_is_explicit_and_voice_only(tmp_path: Path):
+    from sartor.frameworks import add_framework
+
+    project = seed_project(tmp_path)
+    add_framework(
+        project,
+        Path(__file__).parents[1] / "examples/jane-doe/framework-demo.csv",
+        "demo",
+        "custom",
+    )
+    evidence = span_id_containing(project, "40 store managers")
+    plan = {
+        "summary": "Data analyst with 6 years of experience at level 4.",
+        "sections": [
+            {
+                "section": "work",
+                "index": 0,
+                "highlights": [
+                    {
+                        "index": 1,
+                        "text": "Delivered a Tableau dashboard used by 40 store managers weekly.",
+                        "evidence": [evidence],
+                    },
+                    {
+                        "index": 1,
+                        "text": "Delivered dashboards at SFIA level 4 for 40 store managers.",
+                        "evidence": [evidence],
+                    },
+                ],
+            },
+            {"section": "skills", "index": 0},
+        ],
+    }
+    provider = _CaptureProvider(json.dumps(plan))
+    out = tailor_resume(
+        project,
+        "acme",
+        provider,
+        framework_name="demo",
+        voice="framework",
+    )
+    tailored = json.loads(out.read_text(encoding="utf-8"))
+    prompt = provider.calls[0][1]
+    assert "FRAMEWORK VOICE" in prompt
+    assert "Do not mention a framework code or level" in prompt
+    assert "Dashboard delivery" in prompt
+    bullets = tailored["work"][0]["highlights"]
+    assert [bullet["text"] for bullet in bullets] == [
+        "Delivered a Tableau dashboard used by 40 store managers weekly."
+    ], "explicit level wording must be dropped from a resume"
+    assert "level 4" not in tailored["basics"].get("summary", "").lower()
+    assert tailored["meta"]["sartor"]["framework"] == {
+        "name": "demo",
+        "voice": "framework",
+        "display": "voice-only",
+    }
+
+    with pytest.raises(TailorError, match="voice framework"):
+        tailor_resume(project, "acme", _CaptureProvider("{}"), framework_name="demo")
+    with pytest.raises(TailorError, match="framework"):
+        tailor_resume(project, "acme", _CaptureProvider("{}"), voice="framework")
+    with pytest.raises(TailorError, match="voice"):
+        tailor_resume(project, "acme", _CaptureProvider("{}"), voice="marketing")
+
+
 def test_tailor_derives_evidence_when_plan_omits_it(tmp_path: Path):
     project = seed_project(tmp_path)
     plan = {"sections": [{"section": "work", "index": 1}]}

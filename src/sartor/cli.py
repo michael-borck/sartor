@@ -236,8 +236,24 @@ def target_add(
 
 
 @app.command()
-def tailor(name: str = typer.Argument(...)) -> None:
-    """Tailor the profile against a target (S-006)."""
+def tailor(
+    name: str = typer.Argument(...),
+    framework: Annotated[
+        str | None,
+        typer.Option(
+            "--framework",
+            help="Framework for optional framework voice (S-018).",
+        ),
+    ] = None,
+    voice: Annotated[
+        str,
+        typer.Option(
+            "--voice",
+            help="standard (default) or framework (voice-only; no level).",
+        ),
+    ] = "standard",
+) -> None:
+    """Tailor the profile against a target (S-006, S-018)."""
     import json as _json
 
     from sartor.tailor import TailorError, tailor_resume
@@ -245,13 +261,24 @@ def tailor(name: str = typer.Argument(...)) -> None:
     project = _project_or_exit()
     provider = _provider_or_exit()
     try:
-        out = tailor_resume(project, name, provider)
+        out = tailor_resume(
+            project,
+            name,
+            provider,
+            framework_name=framework,
+            voice=voice,
+        )
     except TailorError as exc:
         err_console.print(str(exc))
         raise typer.Exit(code=1) from exc
     meta = _json.loads(out.read_text(encoding="utf-8"))["meta"]["sartor"]
     kept_bits = ", ".join(f"{k} {v}" for k, v in meta["kept"].items())
     console.print(f"Tailored for {name}: kept {kept_bits or 'nothing'}")
+    if meta.get("framework"):
+        console.print(
+            f"Framework voice: {meta['framework']['name']} "
+            "(voice-only; no level printed)"
+        )
     console.print(
         f"Bullets: {meta['bullets_kept']} kept, "
         f"{meta['bullets_dropped']} dropped (no evidence or unsupported fact)"
@@ -426,9 +453,16 @@ def framework_list() -> None:
         )
         return
     for framework in frameworks:
+        skills = [
+            row for row in framework.get("skills", []) or [] if isinstance(row, dict)
+        ]
+        codes = {
+            str(row.get("code", "")).lower() for row in skills if row.get("code")
+        }
         console.print(
             f"{framework.get('name')}: kind {framework.get('kind')}, "
-            f"{len(framework.get('skills', []))} skills "
+            f"{len(codes)} codes, {len(skills)} rows, "
+            f"{len(framework.get('confirmed_levels', {}) or {})} confirmed levels "
             f"(source {framework.get('source_file')})"
         )
 
@@ -449,13 +483,87 @@ def framework_map(
     except FrameworkError as exc:
         err_console.print(str(exc))
         raise typer.Exit(code=1) from exc
-    counts = _json.loads(out.read_text(encoding="utf-8"))["counts"]
+    mapping = _json.loads(out.read_text(encoding="utf-8"))
+    counts = mapping["counts"]
     console.print(
         f"Mapped {target} to {framework}: matched {counts['matched']}, "
         f"target gaps {counts['target_gap']}, profile only {counts['profile_only']}, "
         f"neither {counts['neither']}"
     )
+    suggested = sum(
+        1 for row in mapping.get("skills", []) if row.get("level_status") == "suggested"
+    )
+    confirmed = sum(
+        1 for row in mapping.get("skills", []) if row.get("level_status") == "confirmed"
+    )
+    if suggested or confirmed:
+        console.print(
+            f"Internal levels: {confirmed} confirmed, {suggested} suggested "
+            "(suggested is not a formal assessment)"
+        )
     console.print(f"Wrote {out}; run sartor report {target} to include it")
+    console.print(
+        f"Statement: sartor framework statement {target} --framework {framework}"
+    )
+
+
+@framework_app.command("confirm")
+def framework_confirm(
+    framework: str = typer.Option(..., "--framework", help="Framework name."),
+    code: str = typer.Option(..., "--code", help="Framework skill code."),
+    level: str = typer.Option(
+        ..., "--level", help="Level you confirm you stand behind."
+    ),
+) -> None:
+    """Confirm a framework level for one code (S-018)."""
+    from sartor.frameworks import FrameworkError, confirm_framework_level
+
+    project = _project_or_exit()
+    try:
+        out = confirm_framework_level(project, framework, code, level)
+    except FrameworkError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    console.print(
+        f"Confirmed {code} at level {level} in framework {framework} ({out.name})."
+    )
+    console.print("Re-run framework map or statement to refresh exported files.")
+
+
+@framework_app.command("statement")
+def framework_statement(
+    target: str = typer.Argument(...),
+    framework: str = typer.Option(..., "--framework", help="Framework name."),
+    display: Annotated[
+        str,
+        typer.Option(
+            "--display",
+            help="none, code (default, no level), or code-level.",
+        ),
+    ] = "code",
+) -> None:
+    """Write a framework-voiced evidence statement (S-018)."""
+    import json as _json
+
+    from sartor.frameworks import FrameworkError, write_framework_statement
+
+    project = _project_or_exit()
+    try:
+        md_path, json_path = write_framework_statement(
+            project, target, framework, display=display
+        )
+    except FrameworkError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    counts = _json.loads(json_path.read_text(encoding="utf-8"))["counts"]
+    console.print(
+        f"Framework statement for {target} ({framework}, display {display}): "
+        f"{counts['statements']} statements across "
+        f"{counts['skills_with_statements']} skills"
+    )
+    if display != "code-level":
+        console.print("No level is printed in the statement.")
+    console.print(f"Wrote {md_path.name} and {json_path.name} in exports/{target}/")
 
 
 @app.command()

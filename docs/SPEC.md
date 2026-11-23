@@ -91,9 +91,16 @@ command tests the connection and lists models before any generation.
 ## Frameworks and web search (phase 2)
 
 - SFIA, O*NET, ESCO, AQF mapping of both profile and target, so skills
-  share a vocabulary ("SFIA PROG level 4"). Career Compass's F6 notes
-  apply. SFIA content is licence-restricted: user supplies it, or codes
-  are looked up live; nothing is bundled or redistributed.
+  share a vocabulary. One code may have several level rows with
+  descriptors. Framework data can also drive an evidence statement and
+  optional framework voice in tailoring. The statement prints code and
+  skill name but no level by default; seniority is inferred from
+  scope, autonomy, complexity, influence, and outcomes. Suggested
+  levels stay internal, require descriptor-specific evidence, and are
+  not a formal assessment; only applicant-confirmed levels can be shown
+  plainly in the explicit `code-level` display. SFIA content is
+  licence-restricted: the user supplies it; nothing is bundled, fetched,
+  or redistributed.
 - Search grounding (company/role context, current terminology) follows
   the Study Buddy → Career Compass chain: DuckDuckGo default,
   Brave/Serper/SearXNG optional, automatic fallback. Only derived
@@ -114,7 +121,8 @@ command tests the connection and lists models before any generation.
 - **M1** — core + CLI: ingest, distil, tailor, verify, MD/HTML/PDF/DOCX
   render, two providers, `doctor`. One theme (`ats-plain`).
 - **M2** — `serve` web UI, remaining themes, handoff files, manifest.
-- **M3** — framework mapping + search grounding (both opt-in).
+- **M3** — framework mapping, framework-voiced evidence, and search
+  grounding (all opt-in).
 - **M4** — Tauri desktop, signed installers, PyPI release polish.
 
 ## Decided (2026-11-22, before M1 stories)

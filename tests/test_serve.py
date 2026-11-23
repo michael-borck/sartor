@@ -262,3 +262,35 @@ def test_serve_framework_and_research(tmp_path: Path):
     assert download.json()["framework"] == "demo"
     assert client.get("/targets/acme/files/research.json").status_code == 200
     assert client.get("/api/project").json()["frameworks"][0]["name"] == "demo"
+
+    response = client.post(
+        "/targets/acme/actions/framework-statement",
+        data={"framework": "demo", "display": "code"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    statement = project / "exports/acme/statement-demo.md"
+    assert statement.is_file()
+    assert "Level 4" not in statement.read_text(encoding="utf-8")
+    page = client.get("/targets/acme")
+    assert page.status_code == 200
+    assert "Framework statements" in page.text
+    assert "internal only" in page.text.lower()
+    assert client.get("/targets/acme/files/statement-demo.md").status_code == 200
+    assert client.get("/targets/acme/files/statement-demo.json").status_code == 200
+    detail = client.get("/api/targets/acme").json()
+    assert detail["framework_statements"][0]["framework"] == "demo"
+
+    response = client.post(
+        "/targets/acme/actions/framework-confirm",
+        data={"framework": "demo", "code": "SQL", "level": "4"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    page = client.get("/targets/acme")
+    assert "confirmed 4" in page.text
+    mapping = json.loads(
+        (project / "exports/acme/framework-demo.json").read_text(encoding="utf-8")
+    )
+    sql = {row["code"]: row for row in mapping["skills"]}["SQL"]
+    assert sql["confirmed_level"] == 4

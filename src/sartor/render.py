@@ -547,6 +547,20 @@ def build_manifest(
             }
         except (OSError, json.JSONDecodeError):
             verify = None
+    framework_inputs: list[dict[str, Any]] = []
+    seen_framework_paths: set[Path] = set()
+    export_dir = project / "exports" / target
+    for pattern, prefix in (
+        ("framework-*.json", "framework-"),
+        ("statement-*.json", "statement-"),
+    ):
+        for artifact in sorted(export_dir.glob(pattern)):
+            framework_file = (
+                project / "frameworks" / artifact.name.removeprefix(prefix)
+            )
+            if framework_file.is_file() and framework_file not in seen_framework_paths:
+                seen_framework_paths.add(framework_file)
+                framework_inputs.append(_file_entry(framework_file))
     inputs = {
         "profile": _optional_file_entry(project / "profile.json"),
         "target": _optional_file_entry(project / "targets" / f"{target}.json"),
@@ -555,20 +569,20 @@ def build_manifest(
             project / "exports" / target / "tailored.json"
         ),
         "sources": sources,
-        "frameworks": [
-            _file_entry(path)
-            for mapping in sorted(
-                (project / "exports" / target).glob("framework-*.json")
-            )
-            if (
-                path := project
-                / "frameworks"
-                / (mapping.name.removeprefix("framework-"))
-            ).is_file()
-        ],
+        "frameworks": framework_inputs,
         "framework_mappings": [
             _file_entry(path)
             for path in sorted((project / "exports" / target).glob("framework-*.json"))
+            if path.is_file()
+        ],
+        "framework_statements": [
+            _file_entry(path)
+            for path in sorted(
+                [
+                    *export_dir.glob("statement-*.json"),
+                    *export_dir.glob("statement-*.md"),
+                ]
+            )
             if path.is_file()
         ],
         "research": _optional_file_entry(

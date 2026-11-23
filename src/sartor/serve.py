@@ -50,6 +50,9 @@ DOWNLOAD_FILES = {
     "research.json": "application/json",
 }
 _FRAMEWORK_FILE_RE = re.compile(r"^framework-[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
+_STATEMENT_FILE_RE = re.compile(
+    r"^statement-[A-Za-z0-9][A-Za-z0-9._-]*\.(?:json|md)$"
+)
 
 
 def download_media_type(filename: str) -> str | None:
@@ -57,6 +60,8 @@ def download_media_type(filename: str) -> str | None:
         return DOWNLOAD_FILES[filename]
     if _FRAMEWORK_FILE_RE.match(filename):
         return "application/json"
+    if _STATEMENT_FILE_RE.match(filename):
+        return "application/json" if filename.endswith(".json") else "text/markdown"
     return None
 
 
@@ -101,6 +106,10 @@ def export_files(project: Path, target: str) -> list[dict[str, Any]]:
     names = list(DOWNLOAD_FILES)
     if out.is_dir():
         names.extend(p.name for p in sorted(out.glob("framework-*.json")))
+        names.extend(
+            p.name
+            for p in sorted([*out.glob("statement-*.json"), *out.glob("statement-*.md")])
+        )
     for name in names:
         path = out / name
         if path.is_file():
@@ -164,6 +173,26 @@ def project_summary(project: Path, config: dict[str, Any]) -> dict[str, Any]:
             )
     from sartor.frameworks import list_frameworks
 
+    framework_summaries: list[dict[str, Any]] = []
+    for item in list_frameworks(project):
+        skills = [row for row in item.get("skills", []) or [] if isinstance(row, dict)]
+        framework_summaries.append(
+            {
+                "name": item.get("name"),
+                "kind": item.get("kind"),
+                "skills": len(skills),
+                "codes": len(
+                    {
+                        str(row.get("code", "")).lower()
+                        for row in skills
+                        if row.get("code")
+                    }
+                ),
+                "level_rows": sum(1 for row in skills if row.get("level") is not None),
+                "confirmed_levels": len(item.get("confirmed_levels", {}) or {}),
+                "source_file": item.get("source_file"),
+            }
+        )
     return {
         "version": __version__,
         "project": str(project),
@@ -171,15 +200,7 @@ def project_summary(project: Path, config: dict[str, Any]) -> dict[str, Any]:
         "sources": sources,
         "profile": profile,
         "targets": targets,
-        "frameworks": [
-            {
-                "name": item.get("name"),
-                "kind": item.get("kind"),
-                "skills": len(item.get("skills", []) or []),
-                "source_file": item.get("source_file"),
-            }
-            for item in list_frameworks(project)
-        ],
+        "frameworks": framework_summaries,
         "search_enabled": bool(config.get("search_enabled")),
     }
 
@@ -215,12 +236,17 @@ def target_detail(project: Path, name: str) -> dict[str, Any] | None:
                 }
             )
     framework_mappings: list[dict[str, Any]] = []
+    framework_statements: list[dict[str, Any]] = []
     out_dir = project / "exports" / name
     if out_dir.is_dir():
         for mapping_path in sorted(out_dir.glob("framework-*.json")):
             mapping = _read_json(mapping_path)
             if mapping is not None:
                 framework_mappings.append(mapping)
+        for statement_path in sorted(out_dir.glob("statement-*.json")):
+            statement = _read_json(statement_path)
+            if statement is not None:
+                framework_statements.append(statement)
     return {
         "target": target,
         "tailored": tailored,
@@ -228,6 +254,7 @@ def target_detail(project: Path, name: str) -> dict[str, Any] | None:
         "verify_counts": (verify or {}).get("counts"),
         "coverage": coverage,
         "frameworks": framework_mappings,
+        "framework_statements": framework_statements,
         "research": _read_json(out_dir / "research.json"),
         "files": export_files(project, name),
     }
@@ -360,11 +387,13 @@ def _home_html(
     )
     framework_rows = "".join(
         f"<tr><td>{esc(str(f['name']))}</td><td>{esc(str(f['kind']))}</td>"
-        f"<td>{f['skills']}</td><td>{esc(str(f.get('source_file') or ''))}</td></tr>"
+        f"<td>{f.get('codes', f['skills'])} codes ({f.get('level_rows', 0)} level rows)</td>"
+        f"<td>{f.get('confirmed_levels', 0)}</td>"
+        f"<td>{esc(str(f.get('source_file') or ''))}</td></tr>"
         for f in summary.get("frameworks", [])
     )
     framework_rows = (
-        "<table><thead><tr><th>Name</th><th>Kind</th><th>Skills</th><th>Source</th></tr></thead><tbody>"
+        "<table><thead><tr><th>Name</th><th>Kind</th><th>Skills</th><th>Confirmed levels</th><th>Source</th></tr></thead><tbody>"
         + framework_rows
         + "</tbody></table>"
         if framework_rows
@@ -389,7 +418,7 @@ def _home_html(
 <input id="files" type="file" name="files" multiple required>
 <button type="submit">Ingest sources</button></form></section>
 <section class="panel"><h2>Frameworks</h2>
-<p class="muted">Framework data is user-supplied (CSV/JSON with code,name columns); nothing is bundled or fetched.</p>
+<p class="muted">Framework data is user-supplied (CSV/JSON with code,name columns; a code may repeat at different levels); nothing is bundled or fetched.</p>
 {framework_rows}
 <form method="post" action="/actions/frameworks{token_suffix}" enctype="multipart/form-data">
 <label for="fw-name">Framework name</label><input id="fw-name" type="text" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._-]*">
@@ -528,16 +557,62 @@ def _target_html(
     default_theme = summary["config"].get("theme") or "ats-plain"
     framework_blocks: list[str] = []
     for mapping in detail.get("frameworks", []) or []:
-        rows_html = "".join(
-            f"<tr><td>{esc(str(row.get('code')))}</td><td>{esc(str(row.get('name')))}</td>"
-            f"<td><span class='verdict {'supported' if row.get('profile_status') == 'evidenced' else ('weak' if row.get('profile_status') == 'weak' else 'unsupported')}'>{esc(str(row.get('profile_status')))}</span></td>"
-            f"<td><span class='verdict {'supported' if row.get('alignment') == 'matched' else ('weak' if row.get('alignment') == 'profile_only' else 'unsupported')}'>{esc(str(row.get('alignment')))}</span></td></tr>"
-            for row in mapping.get("skills", []) or []
-        )
+        framework_name = str(mapping.get("framework") or "")
+        row_bits: list[str] = []
+        for row in mapping.get("skills", []) or []:
+            if row.get("confirmed_level") is not None:
+                level_text = f"confirmed {row.get('confirmed_level')}"
+            elif row.get("suggested_level") is not None:
+                level_text = (
+                    f"suggested {row.get('suggested_level')} (not confirmed)"
+                )
+            else:
+                level_text = "none"
+            level_values: list[Any] = []
+            for level_row in row.get("levels", []) or []:
+                value = (
+                    level_row.get("level")
+                    if isinstance(level_row, dict)
+                    else None
+                )
+                if value is not None and value not in level_values:
+                    level_values.append(value)
+            if not level_values and row.get("level") is not None:
+                level_values = [row.get("level")]
+            selected_level = row.get("confirmed_level")
+            if selected_level is None:
+                selected_level = row.get("suggested_level")
+            if level_values:
+                options = "".join(
+                    f'<option value="{esc(str(value))}"'
+                    f'{" selected" if str(value) == str(selected_level) else ""}>'
+                    f"{esc(str(value))}</option>"
+                    for value in level_values
+                )
+                confirm_html = (
+                    f"<form method='post' action='/targets/{quote(name)}"
+                    f"/actions/framework-confirm{token_suffix}'>"
+                    f"<input type='hidden' name='framework' value='{esc(framework_name)}'>"
+                    f"<input type='hidden' name='code' value='{esc(str(row.get('code')))}'>"
+                    f"<select name='level' aria-label='Level for {esc(str(row.get('code')))}'>"
+                    f"{options}</select> "
+                    "<button class='secondary' type='submit'>Confirm</button></form>"
+                )
+            else:
+                confirm_html = "<span class='muted'>No level rows</span>"
+            row_bits.append(
+                f"<tr><td>{esc(str(row.get('code')))}</td>"
+                f"<td>{esc(str(row.get('name')))}</td>"
+                f"<td><span class='verdict {'supported' if row.get('profile_status') == 'evidenced' else ('weak' if row.get('profile_status') == 'weak' else 'unsupported')}'>{esc(str(row.get('profile_status')))}</span></td>"
+                f"<td><span class='verdict {'supported' if row.get('alignment') == 'matched' else ('weak' if row.get('alignment') == 'profile_only' else 'unsupported')}'>{esc(str(row.get('alignment')))}</span></td>"
+                f"<td>{esc(level_text)}</td><td>{confirm_html}</td></tr>"
+            )
         framework_blocks.append(
-            f"<h3>{esc(str(mapping.get('framework')))} ({esc(str(mapping.get('kind')))})</h3>"
-            "<table><thead><tr><th>Code</th><th>Skill</th><th>Profile</th><th>Alignment</th></tr></thead><tbody>"
-            + rows_html
+            f"<h3>{esc(framework_name)} ({esc(str(mapping.get('kind')))})</h3>"
+            "<table><thead><tr><th>Code</th><th>Skill</th><th>Profile</th>"
+            "<th>Alignment</th><th>Internal level</th><th>Confirm level</th>"
+            "</tr></thead><tbody>"
+            + "".join(row_bits)
             + "</tbody></table>"
         )
     frameworks_html = (
@@ -550,6 +625,54 @@ def _target_html(
             for item in available
         )
         or '<option value="">(add a framework first)</option>'
+    )
+    tailor_framework_options = '<option value="">(none)</option>' + "".join(
+        f'<option value="{esc(str(item.get("name")))}">{esc(str(item.get("name")))}</option>'
+        for item in available
+    )
+    statement_blocks: list[str] = []
+    for statement in detail.get("framework_statements", []) or []:
+        counts = statement.get("counts") or {}
+        bits = [
+            f"<h3>{esc(str(statement.get('framework')))} "
+            f"({esc(str(statement.get('kind')))})</h3>",
+            (
+                f"<p class='muted'>Display {esc(str(statement.get('display')))} · "
+                f"{counts.get('statements', 0)} statements · source "
+                f"{esc(str(statement.get('bullet_source')))}.</p>"
+            ),
+        ]
+        for row in statement.get("skills", []) or []:
+            statements = row.get("statements", []) or []
+            if not statements:
+                continue
+            if statement.get("display") != "none":
+                heading = f"{row.get('code')} — {row.get('name')}"
+                if (
+                    statement.get("display") == "code-level"
+                    and row.get("display_level") is not None
+                ):
+                    if row.get("level_status") == "confirmed":
+                        heading += f" — Level {row.get('display_level')} (confirmed by you)"
+                    else:
+                        heading += (
+                            f" — Suggested level {row.get('display_level')} "
+                            "(not confirmed)"
+                        )
+                bits.append(f"<h4>{esc(heading)}</h4>")
+            bits.append("<ul>")
+            for item in statements:
+                evidence = ", ".join(
+                    str(value) for value in item.get("evidence", []) or []
+                )
+                bits.append(
+                    f"<li>{esc(str(item.get('text') or ''))}"
+                    f"<br><span class='evidence'>{esc(evidence)}</span></li>"
+                )
+            bits.append("</ul>")
+        statement_blocks.append("".join(bits))
+    statements_html = (
+        "".join(statement_blocks) or "<p class='muted'>No framework statement yet.</p>"
     )
     research = detail.get("research") or {}
     research_bits: list[str] = []
@@ -569,7 +692,10 @@ def _target_html(
 <h1>{esc(title)}</h1>
 <p class="muted">Target <code>{esc(name)}</code> · {esc(str(target.get("organisation") or ""))} · verify: {esc(verify_text)}</p>
 <section class="panel"><h2>Run pipeline</h2><div class="actions">
-<form method="post" action="/targets/{quote(name)}/actions/tailor{token_suffix}"><button type="submit">Tailor</button></form>
+<form method="post" action="/targets/{quote(name)}/actions/tailor{token_suffix}">
+<label>Voice <select name="voice"><option value="standard" selected>standard</option><option value="framework">framework (voice-only, no level)</option></select></label>
+<label>Framework <select name="framework">{tailor_framework_options}</select></label>
+<button type="submit">Tailor</button></form>
 <form method="post" action="/targets/{quote(name)}/actions/verify{token_suffix}">
 <label class="check"><input type="checkbox" name="strict" value="true"> strict</label>
 <label class="check"><input type="checkbox" name="llm" value="true"> entailment</label>
@@ -585,10 +711,17 @@ def _target_html(
 <section class="panel"><h2>Requirements</h2>{"".join(requirements)}</section>
 <section class="panel"><h2>Tailored bullets</h2>{bullet_table}</section>
 <section class="panel"><h2>Coverage</h2>{coverage_html}</section>
-<section class="panel"><h2>Frameworks</h2>{frameworks_html}
+<section class="panel"><h2>Frameworks</h2>
+<p class="muted">Internal only: a suggested level comes from descriptor-specific evidence and is not a formal assessment. Resumes use framework voice only and print no level.</p>
+{frameworks_html}
 <form method="post" action="/targets/{quote(name)}/actions/framework{token_suffix}">
 <label>Map to framework <select name="framework">{framework_options}</select></label>
-<button type="submit">Map framework</button></form></section>
+<button type="submit">Map framework</button></form>
+<form method="post" action="/targets/{quote(name)}/actions/framework-statement{token_suffix}">
+<label>Statement framework <select name="framework">{framework_options}</select></label>
+<label>Display <select name="display"><option value="none">none (evidence only)</option><option value="code" selected>code (no level)</option><option value="code-level">code-level</option></select></label>
+<button type="submit">Build framework statement</button></form></section>
+<section class="panel"><h2>Framework statements</h2>{statements_html}</section>
 <section class="panel"><h2>Research (grounding)</h2>
 <p class="muted">Context only — never evidence for a resume claim. Provider: {esc(str(summary["config"].get("search_provider")))}; search enabled: {"yes" if detail.get("_search_enabled") else "no"}.</p>
 {research_html}
@@ -821,13 +954,24 @@ def create_app(
         return redirect(f"/targets/{quote(name)}", request, ok=ok)
 
     @app.post("/targets/{name}/actions/tailor", dependencies=[Depends(guard)])
-    def action_tailor(name: str, request: Request) -> RedirectResponse:
+    def action_tailor(
+        name: str,
+        request: Request,
+        voice: str = Form("standard"),
+        framework: str = Form(""),
+    ) -> RedirectResponse:
         from sartor.tailor import tailor_resume
 
         return _action_redirect(
             name,
             request,
-            lambda: tailor_resume(project, name, provider_now()),
+            lambda: tailor_resume(
+                project,
+                name,
+                provider_now(),
+                framework_name=framework or None,
+                voice=voice or "standard",
+            ),
             "Tailoring complete. Run Verify next.",
         )
 
@@ -936,6 +1080,75 @@ def create_app(
             request,
             lambda: map_framework(project, name, framework),
             f"Mapped to {framework}.",
+        )
+
+    @app.post(
+        "/targets/{name}/actions/framework-confirm", dependencies=[Depends(guard)]
+    )
+    def action_framework_confirm(
+        name: str,
+        request: Request,
+        framework: str = Form(""),
+        code: str = Form(""),
+        level: str = Form(""),
+    ) -> RedirectResponse:
+        from sartor.frameworks import (
+            confirm_framework_level,
+            load_framework_statement,
+            map_framework,
+            write_framework_statement,
+        )
+
+        if not framework or not code or not level:
+            return redirect(
+                f"/targets/{quote(name)}",
+                request,
+                error="Choose a framework, code, and level to confirm.",
+            )
+
+        def run() -> None:
+            confirm_framework_level(project, framework, code, level)
+            map_framework(project, name, framework)
+            existing = load_framework_statement(project, name, framework)
+            if existing is not None:
+                write_framework_statement(
+                    project,
+                    name,
+                    framework,
+                    display=str(existing.get("display") or "code"),
+                )
+
+        return _action_redirect(
+            name,
+            request,
+            run,
+            f"Confirmed {code} at level {level} in {framework}.",
+        )
+
+    @app.post(
+        "/targets/{name}/actions/framework-statement", dependencies=[Depends(guard)]
+    )
+    def action_framework_statement(
+        name: str,
+        request: Request,
+        framework: str = Form(""),
+        display: str = Form("code"),
+    ) -> RedirectResponse:
+        from sartor.frameworks import write_framework_statement
+
+        if not framework:
+            return redirect(
+                f"/targets/{quote(name)}",
+                request,
+                error="Add a framework first (home page).",
+            )
+        return _action_redirect(
+            name,
+            request,
+            lambda: write_framework_statement(
+                project, name, framework, display=display or "code"
+            ),
+            f"Framework statement written for {framework} (display {display}).",
         )
 
     @app.post("/targets/{name}/actions/research", dependencies=[Depends(guard)])

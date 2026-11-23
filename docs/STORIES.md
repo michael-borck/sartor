@@ -329,8 +329,9 @@ Acceptance:
   description, keywords; source filename and sha256 recorded.
 - [unit] CSV requires `code,name`; JSON accepts a list or
   `{"skills": [...]}`; keywords split on `;` or `|`.
-- [self] Missing code/name, a duplicate code, an unknown kind, or an
-  empty framework fails naming the row; nothing is written.
+- [self] Missing code/name, a duplicate code + level (S-018 allows one
+  code at several levels), an unknown kind, or an empty framework
+  fails naming the row; nothing is written.
 - [self] `framework list` shows name, kind, and skill count; no
   framework data ships in the package itself.
 Status: done
@@ -403,6 +404,51 @@ Acceptance:
   existing mapping and the research file hash when present.
 - [self] No search or provider call happens on page load.
 Status: done
+
+### S-018 Framework-voiced evidence statements
+As an applicant, I can present supported experience in a framework's
+industry voice and, when useful, as a separate framework statement,
+without printing a level claim by default. The evidence should let a
+reader infer seniority from scope, autonomy, complexity, influence,
+and outcomes.
+Screens: serve target review (framework statements)
+Depends: S-006, S-007, S-014, S-015, S-017
+Acceptance:
+- [unit] Framework rows may repeat a code at different levels; the
+  unique key is code + level, each row may carry a level descriptor.
+  `framework map` returns one row per code with level details,
+  `suggested_level`, `confirmed_level`, and `level_status`.
+- [unit] A suggested level is deterministic, uses descriptor-specific
+  evidence only, and is never inferred from a code or shared keyword
+  alone. It is labelled suggested and is not a formal assessment.
+- [self] `sartor framework confirm --framework NAME --code CODE
+  --level LEVEL` records a level the applicant confirms; an unknown
+  code or level is rejected and changes nothing.
+- [self] `sartor framework statement TARGET --framework NAME
+  --display none|code|code-level` writes
+  `statement-<framework>.md` and `.json`; default `code` shows code and
+  skill name but no level. Every statement bullet is backed by
+  `src://<file>#s<N>` evidence in the JSON.
+- [unit] `display none` omits codes and levels; `code-level` shows a
+  confirmed level plainly and any suggested level only as a qualified
+  suggestion. A tailored resume never gains a level from a statement.
+- [self] Optional `sartor tailor TARGET --framework NAME --voice
+  framework` uses framework names/keywords where profile evidence
+  already supports them. Resume bullets stay voice-only: explicit
+  level wording returned by a model is dropped, and levels never
+  upgrade a claim or create evidence.
+- [self] The serve target page shows internal suggested/confirmed
+  levels, lets the applicant confirm a level, and builds/downloads a
+  statement; report and manifest include existing statements.
+Status: done
+UX:
+- Flow: add framework with code+level rows -> map -> optionally confirm
+  a level -> build statement when the application asks for framework
+  evidence; use framework voice explicitly when tailoring.
+- Words: "framework statement", "framework voice", "suggested level",
+  "confirmed level". A suggestion is never called an assessment.
+- Access: level state is a word, never colour alone; default display is
+  `code`, never `code-level`.
 
 ## Seed data
 
