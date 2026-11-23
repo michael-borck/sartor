@@ -40,13 +40,14 @@ def test_help_lists_m1_commands():
         "verify",
         "report",
         "render",
+        "serve",
     ):
         assert command in result.output
 
 
 def test_stub_command_names_its_story():
-    # All M1 commands are implemented; unknown commands fail cleanly.
-    result = runner.invoke(app, ["serve"])
+    # All M1/M2 commands are implemented; unknown commands fail cleanly.
+    result = runner.invoke(app, ["frobnicate"])
     assert result.exit_code != 0
 
 

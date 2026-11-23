@@ -311,7 +311,7 @@ Acceptance:
 - [self] A tailored target page shows each bullet's verdict word from
   `verify.json` beside the bullet (never colour alone).
 - [manual] A person downloads `resume.pdf` and `pitch.md` from the bundle page.
-Status: todo
+Status: done
 
 ## Seed data
 
@@ -330,7 +330,7 @@ Status: todo
 
 ## Later
 
-- M2 remainder: `sartor serve` web UI (S-013).
+- Selection-criteria response documents generated from a target.
 - M3: SFIA / O*NET / ESCO mapping (user-supplied data only); opt-in
   web-search grounding with derived queries only.
 - M4: Tauri desktop shell over `serve`; signed installers.

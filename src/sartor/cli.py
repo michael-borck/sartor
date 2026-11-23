@@ -354,3 +354,29 @@ def render(
     for path in written:
         console.print(f"Wrote {path.name}")
     console.print(f"Bundle: exports/{name}/")
+
+
+@app.command()
+def serve(
+    host: Annotated[
+        str, typer.Option("--host", help="Bind host (default localhost only).")
+    ] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", "-p", help="Bind port.")] = 5384,
+) -> None:
+    """Run the local web UI for this project (S-013)."""
+    project = _project_or_exit()
+    try:
+        from sartor.serve import serve as run_serve
+    except RuntimeError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    display_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    console.print(f"Sartor serve: http://{display_host}:{port}/")
+    console.print("Open that URL in your browser. Stop with Ctrl-C.")
+    try:
+        run_serve(project, host=host, port=port)
+    except RuntimeError as exc:
+        err_console.print(str(exc))
+        if "FastAPI" in str(exc) or "serve" in str(exc).lower():
+            err_console.print('Install with: pip install "sartor[serve]"')
+        raise typer.Exit(code=1) from exc

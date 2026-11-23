@@ -15,11 +15,13 @@ Unsupported claims are flagged, never quietly invented. No account, no
 telemetry; bring your own model (any OpenAI-compatible endpoint —
 including local Ollama — or Anthropic).
 
-**Status:** M1 core loop implemented (CLI: ingest → profile → target →
-tailor → verify → report → render). Web UI, extra themes, and handoffs
-are M2. Product definition in
+**Status:** M1 core loop released as 0.1.0 (CLI: ingest → profile →
+target → tailor → verify → report → render). M2 is implemented on
+`main` (not yet in a PyPI release): `modern`/`academic` themes,
+pitch/deck handoffs, bundle manifest, and the local web UI
+(`sartor serve`). Product definition in
 [docs/BRIEF.md](docs/BRIEF.md), design in [docs/SPEC.md](docs/SPEC.md),
-M1 stories in [docs/STORIES.md](docs/STORIES.md).
+stories in [docs/STORIES.md](docs/STORIES.md).
 
 ```bash
 pip install "sartor[all]"   # document ingest/render + schema validation + PDF
@@ -30,6 +32,7 @@ sartor profile build          # draft profile.json, then edit it (S-004)
 sartor target add acme --file ad.txt                            (S-005)
 sartor tailor acme && sartor verify acme && sartor render acme  (S-006…S-009)
 sartor render acme --theme modern   # or academic; else theme: in sartor.yaml
+sartor serve                        # web UI at http://127.0.0.1:5384/ (needs sartor[serve])
 ```
 
 Development: `uv sync && uv run pytest && uv run ruff check .`
