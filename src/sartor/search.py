@@ -165,7 +165,12 @@ def _clean(results: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
     for item in results:
         title = str(item.get("title") or item.get("name") or "").strip()
         url = str(item.get("url") or item.get("link") or "").strip()
-        if not title or not url.startswith(("http://", "https://")):
+        parsed = urlparse(url)
+        if (
+            not title
+            or parsed.scheme not in ("http", "https")
+            or "." not in parsed.netloc
+        ):
             continue
         out.append(
             {

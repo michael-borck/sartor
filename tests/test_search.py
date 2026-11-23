@@ -151,3 +151,15 @@ def test_parse_duckduckgo_lite_unwraps_redirects():
             "snippet": "Public snippet.",
         }
     ]
+
+
+def test_fake_search_filters_malformed_redirect_urls():
+    fake = FakeSearch(
+        {
+            "q": [
+                {"title": "Bad redirect", "url": "http:///go/v1/abc", "snippet": "x"},
+                {"title": "Good", "url": "https://example.com/ok", "snippet": "y"},
+            ]
+        }
+    )
+    assert [r["title"] for r in fake.search("q")] == ["Good"]
