@@ -8,17 +8,16 @@ evidence supports, then renders a finished résumé in Markdown, HTML, PDF
 and DOCX. Rendered bundles also include a pitch script for
 [Narra](https://github.com/michael-borck/narra), a deck for
 [SlideStream](https://github.com/michael-borck/slide-stream), and a
-`manifest.json` (M2, on `main`; PyPI 0.1.0 is the M1 release).
+`manifest.json`.
 
 Every claim in the output traces back to a source you supplied.
 Unsupported claims are flagged, never quietly invented. No account, no
 telemetry; bring your own model (any OpenAI-compatible endpoint —
 including local Ollama — or Anthropic).
 
-**Status:** M1 core loop released as 0.1.0 (CLI: ingest → profile →
-target → tailor → verify → report → render). M2 is implemented on
-`main` (not yet in a PyPI release): `modern`/`academic` themes,
-pitch/deck handoffs, bundle manifest, and the local web UI
+**Status:** 0.2.0 — M1 core loop (CLI: ingest → profile → target →
+tailor → verify → report → render) plus M2: `modern`/`academic`
+themes, pitch/deck handoffs, bundle manifest, and the local web UI
 (`sartor serve`). Product definition in
 [docs/BRIEF.md](docs/BRIEF.md), design in [docs/SPEC.md](docs/SPEC.md),
 stories in [docs/STORIES.md](docs/STORIES.md).
