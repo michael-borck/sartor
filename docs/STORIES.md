@@ -560,7 +560,7 @@ Acceptance:
   detection result; Python installation remains a secondary option.
 - [self] The repository homepage URL points at the landing page once it
   is live, and the page makes no desktop claim before assets exist.
-Status: todo
+Status: done
 UX:
 - Flow: open page -> detected platform download -> optional other links.
 - Words: "Download for <platform>"; other platforms named in full.

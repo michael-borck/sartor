@@ -24,6 +24,10 @@ same local UI. Product definition in
 [docs/BRIEF.md](docs/BRIEF.md), design in [docs/SPEC.md](docs/SPEC.md),
 stories in [docs/STORIES.md](docs/STORIES.md).
 
+**Website & downloads:** [Sartor landing page](https://michael-borck.github.io/sartor/)
+· [latest desktop release](https://github.com/michael-borck/sartor/releases/latest)
+· [PyPI package](https://pypi.org/project/sartor/)
+
 ```bash
 pip install "sartor[all]"   # document ingest/render + schema validation + PDF
 sartor init my-profile        # project folder + editable sartor.yaml
