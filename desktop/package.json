@@ -1,0 +1,13 @@
+{
+  "name": "sartor-desktop",
+  "private": true,
+  "version": "0.3.0",
+  "description": "Sartor Tauri shell",
+  "scripts": {
+    "tauri": "tauri",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

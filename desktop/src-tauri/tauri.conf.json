@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Sartor",
+  "version": "0.3.0",
+  "identifier": "org.borck.sartor",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Sartor",
+        "width": 1180,
+        "height": 840,
+        "minWidth": 760,
+        "minHeight": 560,
+        "url": "index.html"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; frame-src http://127.0.0.1:*; connect-src ipc: http://ipc.localhost http://127.0.0.1:*; font-src 'self' data:"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/michael-borck/sartor/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ0MTEzNkZGRUY5RTMyRjkKUldUNU1wN3YvellSMUlVbnRuUVJkUGtTZFBnd04yNTJRMm16UXZoYlY5TnFFYmI1UUVqRE9FZy8K"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "category": "Productivity",
+    "shortDescription": "Privacy-first resume tailoring — every claim traceable to your evidence",
+    "longDescription": "Sartor tailors a resume from evidence you supply, flags unsupported claims, and renders a finished bundle locally. No account and no telemetry; bring an OpenAI-compatible or Anthropic provider, including local Ollama.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

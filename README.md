@@ -15,12 +15,12 @@ Unsupported claims are flagged, never quietly invented. No account, no
 telemetry; bring your own model (any OpenAI-compatible endpoint —
 including local Ollama — or Anthropic).
 
-**Status:** 0.2.0 — M1 core loop (CLI: ingest → profile → target →
-tailor → verify → report → render) plus M2: `modern`/`academic`
-themes, pitch/deck handoffs, bundle manifest, and the local web UI
-(`sartor serve`). M3 is implemented on `main` (unreleased):
+**Status:** 0.3.0 — M1 core loop (CLI: ingest → profile → target →
+tailor → verify → report → render), M2 themes, pitch/deck handoffs,
+bundle manifest, and local web UI (`sartor serve`), plus M3:
 user-supplied framework mapping, framework-voiced evidence statements,
-and opt-in search grounding. Product definition in
+and opt-in search grounding. M4 adds the Tauri desktop app over the
+same local UI. Product definition in
 [docs/BRIEF.md](docs/BRIEF.md), design in [docs/SPEC.md](docs/SPEC.md),
 stories in [docs/STORIES.md](docs/STORIES.md).
 

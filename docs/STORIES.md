@@ -450,6 +450,122 @@ UX:
 - Access: level state is a word, never colour alone; default display is
   `code`, never `code-level`.
 
+## M4 Desktop: Tauri shell, signed installers, and direct downloads
+
+The desktop app is a thin Tauri v2 shell over the existing Python core
+and `sartor serve` localhost UI, following the app-hq sidecar pattern.
+The shell installs a pinned Sartor runtime with `uv` on first launch;
+it does not create a second document model or a second UI. Electron is
+not used: Sartor has no Node-native or Chromium-specific requirement.
+
+### S-019 Launch Sartor from a Tauri desktop shell
+As an applicant, I open Sartor like a normal desktop app and reach the
+existing local UI without using a terminal.
+Screens: desktop launcher, existing serve home/profile/target screens
+Depends: S-013
+Acceptance:
+- [self] The shell finds `uv` or offers its one-click install, creates a
+  private app-data venv, and installs `sartor[all]==<desktop version>`
+  from PyPI; `SARTOR_DEV_PATH` installs the local source in development.
+- [self] The shell starts `sartor serve` on a free `127.0.0.1` port with
+  a per-launch token, waits for `/api/health`, then shows the existing UI.
+- [self] Closing or quitting the app stops the sidecar; restart replaces
+  it without leaving an orphan process.
+- [self] Startup state and errors are words in the launcher, and sidecar
+  output is written to an app-data log for diagnosis.
+Status: done
+UX:
+- Flow: open app -> preparing runtime if needed -> project UI.
+- Words: "desktop app", "runtime", and "sidecar" only in diagnostics.
+- Access: progress and failure are text, never colour alone.
+
+### S-020 Choose, create, and remember a Sartor project from desktop
+As an applicant, I choose the plain project folder I own, or let Sartor
+create the default one, and the desktop app reopens it next time.
+Screens: desktop header/project settings
+Depends: S-001, S-019
+Acceptance:
+- [self] First launch uses `Documents/Sartor` when no project is saved.
+- [self] A native folder picker can choose another folder; if it is not
+  yet a Sartor project, the shell initializes it with `sartor init`.
+- [self] The selected path is stored in app data (never in the project)
+  and restored on the next launch; changing it restarts the sidecar.
+- [self] The current project can be revealed in the OS file manager.
+Status: done
+UX:
+- Flow: Project -> choose folder -> initialize if needed -> restart.
+- Words: "project" for the user-owned folder; never "workspace".
+- Access: the full current path is visible text, not only a tooltip.
+
+### S-021 Configure a provider from the desktop settings screen
+As an applicant, I set Sartor's provider, model, endpoint, and theme in
+the desktop app without editing YAML or pasting a key into a project file.
+Screens: desktop settings
+Depends: S-002, S-020
+Acceptance:
+- [self] Settings reads and writes the selected project's `sartor.yaml`
+  for provider (`openai-compatible` or `anthropic` only), base URL,
+  model, and theme, preserving unrelated keys.
+- [self] A provider key entered in Settings is stored in the OS keychain
+  and passed only to the sidecar process as `SARTOR_API_KEY`; the YAML
+  contains `${SARTOR_API_KEY}`, never the key value.
+- [self] Clearing the key removes the keychain entry and the YAML key;
+  leaving it blank preserves the existing key.
+- [self] Save restarts the sidecar with the new configuration.
+Status: done
+UX:
+- Flow: Settings -> provider fields -> Save & restart.
+- Words: "provider" and "API key"; the field says a blank key is kept.
+- Access: every field has a label; key state is stated in words.
+
+### S-022 Signed cross-platform desktop releases with stable downloads
+As an applicant, I download the current Sartor desktop installer for my
+platform from a stable direct link, while macOS builds are signed and
+notarized.
+Screens: none (GitHub Actions / GitHub Releases)
+Depends: S-019, S-020, S-021
+Acceptance:
+- [self] The thin caller workflow uses app-hq's shared Tauri release
+  workflow with `updater: true`; manual dispatch runs `notarize-check`
+  only and publishes nothing.
+- [self] Canonical Apple secrets are set with app-hq's sync script; the
+  per-app Tauri updater key is generated separately and never committed.
+- [self] A `v<version>` tag matching Python and desktop versions builds
+  macOS Apple Silicon + Intel, Windows, and Linux assets on GitHub.
+- [self] macOS verification passes `codesign`, `spctl`, and stapler in
+  CI; Windows/Linux are labelled unsigned unless separately configured.
+- [self] Stable aliases are attached after release for direct links:
+  `Sartor-macOS-Apple-Silicon.dmg`, `Sartor-macOS-Intel.dmg`,
+  `Sartor-Windows-x64-Setup.exe`, and `Sartor-Linux-x86_64.AppImage`.
+Status: todo
+UX:
+- Flow: manual notarize-check -> annotated version tag -> verify assets
+  -> release is latest.
+- Words: platform names in asset names are exactly as written above.
+- Access: signing state is stated in words in the release body.
+
+### S-023 Landing page with platform-detected desktop download
+As a visitor, I open Sartor's GitHub Pages landing page, understand the
+privacy/evidence proposition from the hero, and get the right desktop
+installer first while still seeing every platform.
+Screens: GitHub Pages landing page
+Depends: S-022
+Acceptance:
+- [self] The page has a simple hero: Sartor name, evidence-first claim,
+  one hero image/screenshot, and primary download/GitHub actions.
+- [self] Browser platform/architecture detection points the primary
+  button at the matching stable direct asset URL under
+  `releases/latest/download/`; unknown platforms fall back to releases.
+- [self] All platform links remain visible and do not depend on the
+  detection result; Python installation remains a secondary option.
+- [self] The repository homepage URL points at the landing page once it
+  is live, and the page makes no desktop claim before assets exist.
+Status: todo
+UX:
+- Flow: open page -> detected platform download -> optional other links.
+- Words: "Download for <platform>"; other platforms named in full.
+- Access: detection is an enhancement; links work with JavaScript off.
+
 ## Seed data
 
 `examples/jane-doe/` ships in the repo and drives every `[self]` and
@@ -468,7 +584,6 @@ UX:
 ## Later
 
 - Selection-criteria response documents generated from a target.
-- M4: Tauri desktop shell over `serve`; signed installers.
 - Job-ad URL fetching; selection-criteria response documents.
 
 ## Dropped

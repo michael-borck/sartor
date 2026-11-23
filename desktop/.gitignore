@@ -1,0 +1,7 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/schemas/
+# Generated only by tools/prepare_macos_icon.sh during a macOS build.
+src-tauri/Info.plist
+src-tauri/tauri.macos.conf.json
+._*

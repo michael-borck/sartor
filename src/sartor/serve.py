@@ -261,16 +261,25 @@ def target_detail(project: Path, name: str) -> dict[str, Any] | None:
 
 
 _CSS = """
-:root { color-scheme: light; --ink:#17202b; --muted:#5b6774; --line:#d8dee6;
-  --accent:#205a8a; --accent-dark:#174468; --bg:#f3f5f7; --panel:#fff;
-  --ok:#18794e; --weak:#9a6700; --bad:#b42318; }
+:root { color-scheme: light dark; --ink:#17202b; --muted:#5b6774; --line:#d8dee6;
+  --accent:#205a8a; --accent-dark:#174468; --accent-ink:#fff; --bg:#f3f5f7; --panel:#fff;
+  --header:#162433; --header-text:#fff; --header-link:#dce8f3; --field:#fff; --field-line:#aeb9c5;
+  --notice-line:#8db4d2; --notice-bg:#e8f1f8; --error-line:#e4a49e; --error-bg:#fff0ef;
+  --pre-bg:#f7f9fb; --ok:#18794e; --weak:#9a6700; --bad:#b42318; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink:#e8edf3; --muted:#a7b2bf; --line:#334154;
+    --accent:#7ab3df; --accent-dark:#a8cdf0; --accent-ink:#10202f; --bg:#111820; --panel:#19222c;
+    --header:#0d1620; --field:#111820; --field-line:#4b5d70;
+    --notice-line:#35688f; --notice-bg:#17334a; --error-line:#9b4a41; --error-bg:#3a211e;
+    --pre-bg:#131d27; --ok:#75d6a5; --weak:#efc36a; --bad:#ff9b8a; }
+}
 * { box-sizing: border-box; }
 body { margin:0; background:var(--bg); color:var(--ink);
   font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
-header { background:#162433; color:#fff; padding:14px 22px;
+header { background:var(--header); color:var(--header-text); padding:14px 22px;
   display:flex; gap:22px; align-items:baseline; flex-wrap:wrap; }
 header .brand { font-family:Georgia,serif; font-size:24px; }
-header nav a { color:#dce8f3; margin-right:16px; text-decoration:none; }
+header nav a { color:var(--header-link); margin-right:16px; text-decoration:none; }
 header nav a:hover, a { color:var(--accent); }
 main { max-width:1040px; margin:0 auto; padding:24px 20px 48px; }
 h1 { font-family:Georgia,serif; font-weight:500; font-size:30px; margin:8px 0 6px; }
@@ -281,25 +290,25 @@ section.panel { background:var(--panel); border:1px solid var(--line); padding:1
 table { width:100%; border-collapse:collapse; margin:8px 0; }
 th,td { text-align:left; vertical-align:top; padding:7px 9px; border-bottom:1px solid var(--line); }
 th { font-size:13px; color:var(--muted); }
-button, .button { background:var(--accent); color:#fff; border:1px solid var(--accent);
+button, .button { background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent);
   padding:7px 13px; border-radius:4px; cursor:pointer; font:inherit; text-decoration:none; display:inline-block; }
 button:hover, .button:hover { background:var(--accent-dark); }
-button.secondary { background:#fff; color:var(--accent); }
+button.secondary { background:var(--panel); color:var(--accent); }
 label { display:block; font-weight:600; margin:12px 0 5px; }
-input[type=text], textarea, select { width:100%; padding:8px 10px; border:1px solid #aeb9c5; border-radius:4px; font:inherit; background:#fff; }
+input[type=text], textarea, select { width:100%; padding:8px 10px; border:1px solid var(--field-line); border-radius:4px; font:inherit; background:var(--field); color:var(--ink); }
 textarea { min-height:150px; }
 input[type=file] { margin:6px 0; }
 .check { display:flex; gap:8px; align-items:center; font-weight:400; }
 .check input { width:auto; }
 .actions { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
 .actions form { margin:0; }
-.notice { border:1px solid #8db4d2; background:#e8f1f8; padding:10px 14px; margin:14px 0; }
-.error { border:1px solid #e4a49e; background:#fff0ef; padding:10px 14px; margin:14px 0; }
+.notice { border:1px solid var(--notice-line); background:var(--notice-bg); padding:10px 14px; margin:14px 0; }
+.error { border:1px solid var(--error-line); background:var(--error-bg); padding:10px 14px; margin:14px 0; }
 .verdict { font-weight:700; white-space:nowrap; }
 .supported { color:var(--ok); } .weak { color:var(--weak); } .unsupported { color:var(--bad); }
 .evidence { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--muted); overflow-wrap:anywhere; }
 .flag { color:var(--bad); font-weight:700; }
-pre { white-space:pre-wrap; background:#f7f9fb; border:1px solid var(--line); padding:14px; overflow:auto; }
+pre { white-space:pre-wrap; background:var(--pre-bg); border:1px solid var(--line); padding:14px; overflow:auto; }
 code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
 .small { font-size:13px; }
 @media (max-width:680px) { main{padding:16px 12px 36px} th,td{padding:6px} }

@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sartor</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #17202b;
+    --muted: #5b6774;
+    --line: #d8dee6;
+    --accent: #205a8a;
+    --accent-dark: #174468;
+    --bg: #f3f5f7;
+    --panel: #ffffff;
+    --danger: #b42318;
+    --ok: #18794e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --ink: #e8edf3;
+      --muted: #a7b2bf;
+      --line: #334154;
+      --accent: #7ab3df;
+      --accent-dark: #a8cdf0;
+      --bg: #111820;
+      --panel: #19222c;
+      --danger: #ff9b8a;
+      --ok: #75d6a5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .55rem .9rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    flex: none;
+    user-select: none;
+  }
+  header .title { font-family: Georgia, serif; font-size: 1.18rem; font-weight: 600; }
+  #status { color: var(--muted); font-size: .86rem; flex: 1; overflow-wrap: anywhere; }
+  button {
+    font: inherit;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--accent);
+    color: #fff;
+    padding: .42rem .8rem;
+    cursor: pointer;
+  }
+  @media (prefers-color-scheme: dark) { button { color: #10202f; } }
+  button:hover { background: var(--accent-dark); }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { cursor: wait; opacity: .65; }
+  main { flex: 1; position: relative; min-height: 0; }
+  iframe#app { width: 100%; height: 100%; border: 0; display: none; background: var(--bg); }
+  #overlay { position: absolute; inset: 0; overflow: auto; padding: 2rem 1.3rem; background: var(--bg); }
+  .sheet { width: 100%; max-width: 620px; margin: 0 auto; }
+  .sheet h1 { font-family: Georgia, serif; font-weight: 550; font-size: 1.65rem; margin: 0 0 .35rem; }
+  .sheet .sub { color: var(--muted); margin: 0 0 1.2rem; }
+  .card { background: var(--panel); border: 1px solid var(--line); padding: 1rem 1.15rem; margin-top: .8rem; }
+  .card h2 { font-size: .95rem; margin: 0 0 .55rem; }
+  label { display: block; font-weight: 600; margin: .75rem 0 .3rem; }
+  label:first-of-type { margin-top: 0; }
+  input, select {
+    width: 100%;
+    font: inherit;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: .48rem .6rem;
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .85rem; align-items: center; }
+  .check { display: flex; gap: .5rem; align-items: center; font-weight: 400; }
+  .check input { width: auto; }
+  .note, .state { color: var(--muted); font-size: .85rem; }
+  .state strong { color: var(--ink); }
+  #err { color: var(--danger); margin-top: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .boot { text-align: center; margin-top: 18vh; color: var(--muted); }
+  .boot .mark {
+    width: 42px; height: 42px; margin: 0 auto 1rem; border: 2px solid var(--accent);
+    display: grid; place-items: center; font-family: Georgia, serif; font-size: 1.5rem; color: var(--accent);
+  }
+  .hidden { display: none !important; }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; }
+    #status { flex-basis: 100%; order: 4; }
+    #overlay { padding: 1.2rem .8rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="title">Sartor</span>
+  <span id="status">starting…</span>
+  <button id="btn-update" class="secondary hidden" type="button">Update</button>
+  <button id="btn-settings" class="secondary" type="button">Project &amp; Settings</button>
+</header>
+<main>
+  <iframe id="app" title="Sartor"></iframe>
+  <div id="overlay">
+    <div class="sheet">
+      <div id="boot" class="boot">
+        <div class="mark" aria-hidden="true">S</div>
+        <div id="boot-msg">Starting Sartor…</div>
+      </div>
+      <div id="settings" class="hidden">
+        <h1>Project &amp; provider</h1>
+        <p class="sub">Your project stays in a plain folder you own. Provider settings are saved in that project's config; the API key itself stays in your OS keychain.</p>
+        <section class="card" aria-labelledby="project-heading">
+          <h2 id="project-heading">Project</h2>
+          <label for="project_path">Project folder</label>
+          <input id="project_path" type="text" autocomplete="off" spellcheck="false">
+          <p id="project-state" class="state"></p>
+          <div class="actions">
+            <button id="btn-choose" class="secondary" type="button">Choose folder…</button>
+            <button id="btn-open" class="secondary" type="button">Open folder</button>
+          </div>
+          <p class="note">If the folder is not yet a Sartor project, Save &amp; start will initialize it.</p>
+        </section>
+        <section class="card" aria-labelledby="provider-heading">
+          <h2 id="provider-heading">Provider</h2>
+          <label for="provider">Provider</label>
+          <select id="provider">
+            <option value="openai-compatible">OpenAI-compatible / Ollama</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+          <label for="base_url">Base URL</label>
+          <input id="base_url" type="url" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434/v1">
+          <label for="model">Model</label>
+          <input id="model" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. qwen3:4b">
+          <label for="theme">Resume theme</label>
+          <select id="theme">
+            <option value="ats-plain">ats-plain</option>
+            <option value="modern">modern</option>
+            <option value="academic">academic</option>
+          </select>
+          <label for="api_key">API key</label>
+          <input id="api_key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the current key">
+          <p id="key-state" class="state" aria-live="polite"></p>
+          <label class="check"><input id="clear_api_key" type="checkbox"> Remove the saved API key</label>
+          <p class="note">Local Ollama and other local OpenAI-compatible servers usually need no key. No key value is written to the project.</p>
+        </section>
+        <div class="actions">
+          <button id="btn-save" type="button">Save &amp; start</button>
+          <button id="btn-cancel" class="secondary hidden" type="button">Cancel</button>
+        </div>
+        <div id="err" role="alert"></div>
+        <p class="note">Privacy: no account and no telemetry. Sartor runs locally; the only model traffic goes to the provider you configure.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
+const $ = id => document.getElementById(id);
+let server = null;
+let settingsOpen = false;
+
+listen("status", event => {
+  $("status").textContent = event.payload;
+  $("boot-msg").textContent = event.payload;
+});
+
+function showApp() {
+  $("overlay").classList.add("hidden");
+  $("app").style.display = "block";
+  $("status").textContent = "ready — local server on 127.0.0.1:" + server.port;
+}
+
+function showBoot(message) {
+  settingsOpen = false;
+  $("overlay").classList.remove("hidden");
+  $("app").style.display = "none";
+  $("settings").classList.add("hidden");
+  $("boot").classList.remove("hidden");
+  if (message) $("boot-msg").textContent = message;
+}
+
+function showSettings(cancellable) {
+  settingsOpen = true;
+  $("overlay").classList.remove("hidden");
+  $("app").style.display = "none";
+  $("boot").classList.add("hidden");
+  $("settings").classList.remove("hidden");
+  $("btn-cancel").classList.toggle("hidden", !cancellable);
+  $("err").textContent = "";
+}
+
+function setProjectState(info) {
+  if (!info) return;
+  $("project_path").value = info.path || "";
+  const state = info.is_project
+    ? "Existing Sartor project."
+    : (info.exists ? "Folder exists; it will be initialized on start." : "Folder will be created on start.");
+  $("project-state").innerHTML = "<strong>Current folder:</strong> " + escapeHtml(info.path || "") + "<br>" + state;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+  }[char]));
+}
+
+async function loadSettings(projectPath) {
+  const settings = await invoke("get_settings", { projectPath });
+  $("provider").value = settings.provider || "openai-compatible";
+  $("base_url").value = settings.base_url || "";
+  $("model").value = settings.model || "";
+  $("theme").value = settings.theme || "ats-plain";
+  $("api_key").value = "";
+  $("clear_api_key").checked = false;
+  $("key-state").textContent = settings.api_key_set
+    ? "API key: saved. Leave the field blank to keep it."
+    : "API key: not saved.";
+  return settings;
+}
+
+function collectSettings() {
+  return {
+    provider: $("provider").value.trim(),
+    base_url: $("base_url").value.trim(),
+    model: $("model").value.trim(),
+    theme: $("theme").value.trim(),
+    api_key: $("api_key").value.trim(),
+    clear_api_key: $("clear_api_key").checked,
+    api_key_set: false
+  };
+}
+
+async function boot(settings, update) {
+  const projectPath = $("project_path").value.trim();
+  showBoot("Starting Sartor…");
+  $("btn-save").disabled = true;
+  try {
+    server = await invoke("start_server", {
+      projectPath,
+      settings: settings || null,
+      update: !!update
+    });
+    setProjectState({ path: server.project, exists: true, is_project: true });
+    await loadSettings(server.project);
+    $("app").src = "http://127.0.0.1:" + server.port + "/?token=" + encodeURIComponent(server.token);
+    showApp();
+  } catch (error) {
+    $("status").textContent = "Sartor could not start";
+    showSettings(!!server);
+    $("err").textContent = String(error);
+  } finally {
+    $("btn-save").disabled = false;
+  }
+}
+
+$("btn-choose").onclick = async () => {
+  $("err").textContent = "";
+  try {
+    const picked = await invoke("choose_project");
+    if (!picked) return;
+    setProjectState(picked);
+    await loadSettings(picked.path);
+  } catch (error) {
+    $("err").textContent = String(error);
+  }
+};
+
+$("btn-open").onclick = async () => {
+  $("err").textContent = "";
+  try {
+    await invoke("open_project_folder", { projectPath: $("project_path").value.trim() });
+  } catch (error) {
+    $("err").textContent = String(error);
+  }
+};
+
+$("project_path").onchange = async () => {
+  const path = $("project_path").value.trim();
+  if (!path) return;
+  try {
+    await loadSettings(path);
+  } catch (error) {
+    $("err").textContent = String(error);
+  }
+};
+
+$("btn-save").onclick = async () => {
+  await boot(collectSettings(), false);
+};
+
+$("btn-cancel").onclick = () => {
+  settingsOpen = false;
+  if (server) showApp();
+};
+
+$("btn-settings").onclick = async () => {
+  try {
+    if (server) setProjectState({ path: server.project, exists: true, is_project: true });
+    await loadSettings($("project_path").value.trim());
+    showSettings(!!server);
+  } catch (error) {
+    showSettings(!!server);
+    $("err").textContent = String(error);
+  }
+};
+
+listen("update-available", event => {
+  $("btn-update").classList.remove("hidden");
+  $("btn-update").textContent = "Update to " + (event.payload || "new version");
+});
+
+$("btn-update").onclick = async () => {
+  const button = $("btn-update");
+  button.disabled = true;
+  $("status").textContent = "Downloading update…";
+  try {
+    await invoke("install_update");
+  } catch (error) {
+    $("status").textContent = "Update failed";
+    showSettings(!!server);
+    $("err").textContent = String(error);
+    button.disabled = false;
+  }
+};
+
+(async function init() {
+  try {
+    const project = await invoke("get_project");
+    setProjectState(project);
+    await loadSettings(project.path);
+  } catch (error) {
+    showSettings(false);
+    $("err").textContent = String(error);
+    return;
+  }
+  await boot(null, false);
+  try { await invoke("check_update"); } catch (error) { /* Offline: ignore. */ }
+})();
+</script>
+</body>
+</html>

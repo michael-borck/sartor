@@ -1,0 +1,42 @@
+name: Icon review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select newest installed Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1 || true)"
+          if [ -n "$latest" ]; then
+            sudo xcode-select -s "$latest"
+          fi
+          xcode-select -p
+          xcodebuild -version
+
+      - name: Compile Liquid Glass icon
+        run: |
+          chmod +x desktop/tools/make_icon.sh desktop/tools/icon_review.sh
+          desktop/tools/make_icon.sh
+
+      - name: Render every icon look
+        run: desktop/tools/icon_review.sh /tmp/Sartor-icon.png
+
+      - name: Upload icon review
+        uses: actions/upload-artifact@v7
+        with:
+          name: sartor-icon-review
+          path: |
+            /tmp/Sartor-icon.png
+            desktop/Resources/Assets.car
+            desktop/Resources/AppIcon.icns
+          if-no-files-found: error

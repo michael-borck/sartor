@@ -35,6 +35,10 @@ Every noun and verb in CLI output, docs, and errors uses these names.
 | alignment | matched / target gap / profile only / neither, per framework code | fit |
 | grounding | Opt-in web search whose results are cited context for a target | evidence, research proof |
 | derived query | A search query built only from target fields (title, organisation, keywords) | resume query |
+| desktop app | The Tauri v2 shell that launches Sartor's existing local UI | Electron app, native rewrite |
+| runtime | The private app-data Python venv holding the pinned Sartor release | system Python, bundled interpreter |
+| sidecar | The `sartor serve` child process owned by the desktop shell; diagnostics word only | server (in user-facing copy), daemon |
+| stable asset | A version-free release filename used by direct download links | latest file, renamed installer |
 
 Verbs, one per action: `init`, `ingest`, `build`/`check` (profile),
 `add` (target/framework), `tailor`, `verify`, `report`, `render`, `doctor`, `serve`, `map`, `confirm`, `statement`, `research`.

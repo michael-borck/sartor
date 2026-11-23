@@ -1,0 +1,28 @@
+[package]
+name = "sartor-desktop"
+version = "0.3.0"
+description = "Sartor — privacy-first resume tailoring, on your desktop"
+authors = ["Michael Borck <michael.borck@curtin.edu.au>"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+dirs = "5"
+keyring = "4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+uuid = { version = "1", features = ["v4"] }
+
+[profile.release]
+strip = true
+lto = true
