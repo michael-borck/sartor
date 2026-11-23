@@ -200,3 +200,65 @@ def test_tailor_action_uses_injected_provider(tmp_path: Path):
         (project / "exports/acme/tailored.json").read_text(encoding="utf-8")
     )
     assert tailored["work"][0]["highlights"][0]["text"].startswith("Delivered")
+
+
+def test_serve_framework_and_research(tmp_path: Path):
+    from sartor.search import FakeSearch, build_queries
+    from sartor.target import load_target
+
+    project = seed_project(tmp_path)
+    save_tailored(project, "acme", _tailored(project))
+    target = load_target(project, "acme")
+    fake = FakeSearch(
+        {
+            q: [
+                {
+                    "title": "Acme overview",
+                    "url": "https://example.com/acme",
+                    "snippet": "Public company context.",
+                }
+            ]
+            for q in build_queries(target)
+        }
+    )
+    # serve research uses configured chain, so exercise it via injected
+    # provider path: pre-run research with the fake, then check pages.
+    from sartor.search import research_target
+
+    research_target(project, "acme", {"search_enabled": True}, chain=[fake])
+    app = create_app(
+        project,
+        config={"provider": "openai-compatible", "search_enabled": False},
+        provider=FakeProvider({}),
+    )
+    client = TestClient(app)
+    csv_bytes = (
+        Path(__file__).parents[1] / "examples/jane-doe/framework-demo.csv"
+    ).read_bytes()
+    response = client.post(
+        "/actions/frameworks",
+        data={"name": "demo", "kind": "custom"},
+        files=[("file", ("framework-demo.csv", csv_bytes, "text/csv"))],
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert (project / "frameworks/demo.json").is_file()
+    response = client.post(
+        "/targets/acme/actions/framework",
+        data={"framework": "demo"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    mapping = project / "exports/acme/framework-demo.json"
+    assert mapping.is_file()
+    page = client.get("/targets/acme")
+    assert page.status_code == 200
+    assert "Frameworks" in page.text
+    assert "matched" in page.text or "target_gap" in page.text
+    assert "Research (grounding)" in page.text
+    assert "https://example.com/acme" in page.text
+    download = client.get("/targets/acme/files/framework-demo.json")
+    assert download.status_code == 200
+    assert download.json()["framework"] == "demo"
+    assert client.get("/targets/acme/files/research.json").status_code == 200
+    assert client.get("/api/project").json()["frameworks"][0]["name"] == "demo"

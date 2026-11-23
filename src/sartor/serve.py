@@ -46,7 +46,20 @@ DOWNLOAD_FILES = {
     "verify.json": "application/json",
     "coverage.json": "application/json",
     "report.md": "text/markdown",
+    "research.md": "text/markdown",
+    "research.json": "application/json",
 }
+_FRAMEWORK_FILE_RE = re.compile(r"^framework-[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
+
+
+def download_media_type(filename: str) -> str | None:
+    if filename in DOWNLOAD_FILES:
+        return DOWNLOAD_FILES[filename]
+    if _FRAMEWORK_FILE_RE.match(filename):
+        return "application/json"
+    return None
+
+
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -76,13 +89,19 @@ def sanitized_config(config: dict[str, Any]) -> dict[str, Any]:
         "base_url": config.get("base_url"),
         "theme": config.get("theme") or "ats-plain",
         "api_key_set": bool(config.get("api_key")),
+        "search_enabled": bool(config.get("search_enabled")),
+        "search_provider": config.get("search_provider") or "duckduckgo",
+        "search_api_key_set": bool(config.get("search_api_key")),
     }
 
 
 def export_files(project: Path, target: str) -> list[dict[str, Any]]:
     out = project / "exports" / target
     files: list[dict[str, Any]] = []
-    for name in DOWNLOAD_FILES:
+    names = list(DOWNLOAD_FILES)
+    if out.is_dir():
+        names.extend(p.name for p in sorted(out.glob("framework-*.json")))
+    for name in names:
         path = out / name
         if path.is_file():
             files.append({"name": name, "bytes": path.stat().st_size})
@@ -143,6 +162,8 @@ def project_summary(project: Path, config: dict[str, Any]) -> dict[str, Any]:
                     "files": export_files(project, name),
                 }
             )
+    from sartor.frameworks import list_frameworks
+
     return {
         "version": __version__,
         "project": str(project),
@@ -150,6 +171,16 @@ def project_summary(project: Path, config: dict[str, Any]) -> dict[str, Any]:
         "sources": sources,
         "profile": profile,
         "targets": targets,
+        "frameworks": [
+            {
+                "name": item.get("name"),
+                "kind": item.get("kind"),
+                "skills": len(item.get("skills", []) or []),
+                "source_file": item.get("source_file"),
+            }
+            for item in list_frameworks(project)
+        ],
+        "search_enabled": bool(config.get("search_enabled")),
     }
 
 
@@ -183,12 +214,21 @@ def target_detail(project: Path, name: str) -> dict[str, Any] | None:
                     "reasons": verdict.get("reasons", []),
                 }
             )
+    framework_mappings: list[dict[str, Any]] = []
+    out_dir = project / "exports" / name
+    if out_dir.is_dir():
+        for mapping_path in sorted(out_dir.glob("framework-*.json")):
+            mapping = _read_json(mapping_path)
+            if mapping is not None:
+                framework_mappings.append(mapping)
     return {
         "target": target,
         "tailored": tailored,
         "bullets": bullets,
         "verify_counts": (verify or {}).get("counts"),
         "coverage": coverage,
+        "frameworks": framework_mappings,
+        "research": _read_json(out_dir / "research.json"),
         "files": export_files(project, name),
     }
 
@@ -318,6 +358,18 @@ def _home_html(
         if source_rows
         else "<p class='muted'>No sources yet.</p>"
     )
+    framework_rows = "".join(
+        f"<tr><td>{esc(str(f['name']))}</td><td>{esc(str(f['kind']))}</td>"
+        f"<td>{f['skills']}</td><td>{esc(str(f.get('source_file') or ''))}</td></tr>"
+        for f in summary.get("frameworks", [])
+    )
+    framework_rows = (
+        "<table><thead><tr><th>Name</th><th>Kind</th><th>Skills</th><th>Source</th></tr></thead><tbody>"
+        + framework_rows
+        + "</tbody></table>"
+        if framework_rows
+        else "<p class='muted'>No frameworks yet.</p>"
+    )
     token_field = ""
     body = f"""
 <h1>Project review</h1>
@@ -336,6 +388,18 @@ def _home_html(
 <label for="files">Add source files ({esc(", ".join(SUPPORTED_SUFFIXES))})</label>
 <input id="files" type="file" name="files" multiple required>
 <button type="submit">Ingest sources</button></form></section>
+<section class="panel"><h2>Frameworks</h2>
+<p class="muted">Framework data is user-supplied (CSV/JSON with code,name columns); nothing is bundled or fetched.</p>
+{framework_rows}
+<form method="post" action="/actions/frameworks{token_suffix}" enctype="multipart/form-data">
+<label for="fw-name">Framework name</label><input id="fw-name" type="text" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._-]*">
+<label for="fw-kind">Kind</label><select id="fw-kind" name="kind">
+<option value="sfia">sfia</option><option value="onet">onet</option><option value="esco">esco</option>
+<option value="aqf">aqf</option><option value="custom" selected>custom</option></select>
+<label for="fw-file">Framework file (.csv or .json)</label>
+<input id="fw-file" type="file" name="file" accept=".csv,.json" required>
+<label class="check"><input type="checkbox" name="force" value="true"> replace existing framework</label>
+<button type="submit">Add framework</button></form></section>
 <section class="panel"><h2>Targets</h2>{_target_rows(summary, token_suffix)}
 <form method="post" action="/actions/targets{token_suffix}">
 <label for="target-name">New target name</label><input id="target-name" type="text" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._-]*">
@@ -462,6 +526,45 @@ def _target_html(
         ", ".join(f"{k} {v}" for k, v in counts.items()) if counts else "not verified"
     )
     default_theme = summary["config"].get("theme") or "ats-plain"
+    framework_blocks: list[str] = []
+    for mapping in detail.get("frameworks", []) or []:
+        rows_html = "".join(
+            f"<tr><td>{esc(str(row.get('code')))}</td><td>{esc(str(row.get('name')))}</td>"
+            f"<td><span class='verdict {'supported' if row.get('profile_status') == 'evidenced' else ('weak' if row.get('profile_status') == 'weak' else 'unsupported')}'>{esc(str(row.get('profile_status')))}</span></td>"
+            f"<td><span class='verdict {'supported' if row.get('alignment') == 'matched' else ('weak' if row.get('alignment') == 'profile_only' else 'unsupported')}'>{esc(str(row.get('alignment')))}</span></td></tr>"
+            for row in mapping.get("skills", []) or []
+        )
+        framework_blocks.append(
+            f"<h3>{esc(str(mapping.get('framework')))} ({esc(str(mapping.get('kind')))})</h3>"
+            "<table><thead><tr><th>Code</th><th>Skill</th><th>Profile</th><th>Alignment</th></tr></thead><tbody>"
+            + rows_html
+            + "</tbody></table>"
+        )
+    frameworks_html = (
+        "".join(framework_blocks) or "<p class='muted'>Not mapped yet.</p>"
+    )
+    available = summary.get("frameworks", []) or []
+    framework_options = (
+        "".join(
+            f'<option value="{esc(str(item.get("name")))}">{esc(str(item.get("name")))}</option>'
+            for item in available
+        )
+        or '<option value="">(add a framework first)</option>'
+    )
+    research = detail.get("research") or {}
+    research_bits: list[str] = []
+    for block in research.get("queries", []) or []:
+        research_bits.append(f"<h3>{esc(str(block.get('query')))}</h3><ul>")
+        for result in block.get("results", []) or []:
+            research_bits.append(
+                f"<li><a href='{esc(str(result.get('url')))}' rel='noreferrer'>{esc(str(result.get('title')))}</a> — {esc(str(result.get('snippet') or ''))}</li>"
+            )
+        research_bits.append("</ul>")
+    research_html = "".join(research_bits) or "<p class='muted'>No research yet.</p>"
+    detail = {
+        **detail,
+        "_search_enabled": bool(summary["config"].get("search_enabled")),
+    }
     body = f"""
 <h1>{esc(title)}</h1>
 <p class="muted">Target <code>{esc(name)}</code> · {esc(str(target.get("organisation") or ""))} · verify: {esc(verify_text)}</p>
@@ -482,6 +585,16 @@ def _target_html(
 <section class="panel"><h2>Requirements</h2>{"".join(requirements)}</section>
 <section class="panel"><h2>Tailored bullets</h2>{bullet_table}</section>
 <section class="panel"><h2>Coverage</h2>{coverage_html}</section>
+<section class="panel"><h2>Frameworks</h2>{frameworks_html}
+<form method="post" action="/targets/{quote(name)}/actions/framework{token_suffix}">
+<label>Map to framework <select name="framework">{framework_options}</select></label>
+<button type="submit">Map framework</button></form></section>
+<section class="panel"><h2>Research (grounding)</h2>
+<p class="muted">Context only — never evidence for a resume claim. Provider: {esc(str(summary["config"].get("search_provider")))}; search enabled: {"yes" if detail.get("_search_enabled") else "no"}.</p>
+{research_html}
+<form method="post" action="/targets/{quote(name)}/actions/research{token_suffix}">
+<label class="check"><input type="checkbox" name="enable_search" value="true"> enable search for this run (opt-in)</label>
+<button type="submit">Run research</button></form></section>
 <section class="panel"><h2>Download bundle</h2>{files_html}</section>"""
     return _page(f"Target {name}", body, ok, error, token_suffix)
 
@@ -612,7 +725,7 @@ def create_app(
             safe_target_name(name)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        media = DOWNLOAD_FILES.get(filename)
+        media = download_media_type(filename)
         if media is None:
             raise HTTPException(status_code=404, detail="file not available")
         path = project / "exports" / name / filename
@@ -776,6 +889,69 @@ def create_app(
             f"/targets/{quote(name)}",
             request,
             ok="Rendered: " + ", ".join(path.name for path in written),
+        )
+
+    @app.post("/actions/frameworks", dependencies=[Depends(guard)])
+    async def action_framework_add(
+        request: Request,
+        name: str = Form(...),
+        kind: str = Form("custom"),
+        file: UploadFile = File(...),
+        force: bool = Form(False),
+    ) -> RedirectResponse:
+        from sartor.frameworks import FrameworkError, add_framework
+
+        filename = Path(file.filename or "").name
+        if not filename:
+            return redirect("/", request, error="Framework upload needs a file")
+        data = await file.read()
+        if len(data) > MAX_UPLOAD_BYTES:
+            return redirect("/", request, error=f"{filename}: larger than 25 MB")
+        upload_dir = project / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        saved = upload_dir / filename
+        saved.write_bytes(data)
+        try:
+            add_framework(project, saved, name, kind, force=force)
+        except FrameworkError as exc:
+            return redirect("/", request, error=str(exc))
+        except Exception as exc:
+            return redirect("/", request, error=str(exc))
+        return redirect("/", request, ok=f"Framework {name} added.")
+
+    @app.post("/targets/{name}/actions/framework", dependencies=[Depends(guard)])
+    def action_framework_map(
+        name: str, request: Request, framework: str = Form("")
+    ) -> RedirectResponse:
+        from sartor.frameworks import map_framework
+
+        if not framework:
+            return redirect(
+                f"/targets/{quote(name)}",
+                request,
+                error="Add a framework first (home page).",
+            )
+        return _action_redirect(
+            name,
+            request,
+            lambda: map_framework(project, name, framework),
+            f"Mapped to {framework}.",
+        )
+
+    @app.post("/targets/{name}/actions/research", dependencies=[Depends(guard)])
+    def action_research(
+        name: str, request: Request, enable_search: bool = Form(False)
+    ) -> RedirectResponse:
+        from sartor.search import SearchError, research_target
+
+        try:
+            research_target(project, name, active_config, enabled=enable_search)
+        except SearchError as exc:
+            return redirect(f"/targets/{quote(name)}", request, error=str(exc))
+        except Exception as exc:
+            return redirect(f"/targets/{quote(name)}", request, error=str(exc))
+        return redirect(
+            f"/targets/{quote(name)}", request, ok="Research written (context only)."
         )
 
     return app

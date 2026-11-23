@@ -1,0 +1,7 @@
+code,name,level,description,keywords
+SQL,SQL and data modelling,4,Designs queries and data models for reporting,SQL;PostgreSQL;BigQuery
+DASH,Dashboard delivery,4,Builds dashboards that managers use for decisions,Tableau;Power BI;dashboard
+KUBE,Kubernetes operations,3,Operates container platforms in production,Kubernetes
+GO,Go programming,3,Builds services in the Go language,Go;Golang
+PUB,Technical writing and publishing,3,Writes reports and gives talks about data work,publications;white paper;meetup talk
+RUST,Rust programming,3,Builds systems software in Rust,Rust

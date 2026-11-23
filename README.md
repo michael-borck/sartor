@@ -18,7 +18,8 @@ including local Ollama — or Anthropic).
 **Status:** 0.2.0 — M1 core loop (CLI: ingest → profile → target →
 tailor → verify → report → render) plus M2: `modern`/`academic`
 themes, pitch/deck handoffs, bundle manifest, and the local web UI
-(`sartor serve`). Product definition in
+(`sartor serve`). M3 is implemented on `main` (unreleased):
+user-supplied framework mapping and opt-in search grounding. Product definition in
 [docs/BRIEF.md](docs/BRIEF.md), design in [docs/SPEC.md](docs/SPEC.md),
 stories in [docs/STORIES.md](docs/STORIES.md).
 
@@ -32,6 +33,9 @@ sartor target add acme --file ad.txt                            (S-005)
 sartor tailor acme && sartor verify acme && sartor render acme  (S-006…S-009)
 sartor render acme --theme modern   # or academic; else theme: in sartor.yaml
 sartor serve                        # web UI at http://127.0.0.1:5384/ (needs sartor[serve])
+sartor framework add sfia.csv --name sfia --kind sfia   # your own data (S-014)
+sartor framework map acme --framework sfia              # by-code alignment (S-015)
+sartor research acme --enable-search                    # cited context, opt-in (S-016)
 ```
 
 Development: `uv sync && uv run pytest && uv run ruff check .`

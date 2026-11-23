@@ -37,6 +37,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "api_key": None,
     "timeout": 300,
     "theme": "ats-plain",
+    "search_enabled": False,
+    "search_provider": "duckduckgo",
+    "search_api_key": None,
+    "search_base_url": None,
+    "search_timeout": 15,
 }
 
 EXAMPLE_CONFIG = """\
@@ -51,6 +56,14 @@ model: null          # e.g. qwen3:4b (Ollama) — sartor doctor lists models
 api_key: null        # e.g. ${OPENAI_API_KEY}; ignored by local servers
 timeout: 300
 theme: ats-plain
+
+# Opt-in web search grounding (research only; off by default).
+# Queries are derived from the job target only — resume text is never sent.
+search_enabled: false
+search_provider: duckduckgo   # duckduckgo | brave | serper | searxng | auto
+search_api_key: null           # e.g. ${BRAVE_API_KEY} (brave/serper only)
+search_base_url: null          # SearXNG instance, e.g. http://localhost:8080
+search_timeout: 15
 """
 
 _ENV_REF = re.compile(r"^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$")
@@ -85,13 +98,16 @@ def load_config(start: Path | None = None, home: Path | None = None) -> dict[str
         if candidate.is_file():
             merged.update(_load_yaml(candidate))
     config = {key: _expand(value) for key, value in merged.items()}
-    raw_key = merged.get("api_key")
-    if isinstance(raw_key, str):
-        match = _ENV_REF.match(raw_key.strip())
-        if match:
-            # Remember which env var the key was meant to come from, so a
-            # missing key can be reported by name (never by value).
-            config["api_key_env"] = match.group(1)
+    for key_field, env_field in (
+        ("api_key", "api_key_env"),
+        ("search_api_key", "search_api_key_env"),
+    ):
+        raw_key = merged.get(key_field)
+        if isinstance(raw_key, str):
+            match = _ENV_REF.match(raw_key.strip())
+            if match:
+                # Report a missing key by env-var name, never by value.
+                config[env_field] = match.group(1)
     validate_config(config)
     return config
 

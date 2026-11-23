@@ -380,3 +380,105 @@ def serve(
         if "FastAPI" in str(exc) or "serve" in str(exc).lower():
             err_console.print('Install with: pip install "sartor[serve]"')
         raise typer.Exit(code=1) from exc
+
+
+framework_app = typer.Typer(
+    help="User-supplied skill frameworks (SFIA, O*NET, ESCO, AQF, custom)."
+)
+app.add_typer(framework_app, name="framework")
+
+
+@framework_app.command("add")
+def framework_add(
+    file: Path = typer.Argument(...),
+    name: str = typer.Option(..., "--name", help="Framework name used in commands."),
+    kind: Annotated[
+        str,
+        typer.Option("--kind", help="sfia, onet, esco, aqf, or custom."),
+    ] = "custom",
+    force: Annotated[
+        bool, typer.Option("--force", help="Replace an existing framework.")
+    ] = False,
+) -> None:
+    """Add a user-supplied framework CSV/JSON file (S-014)."""
+    from sartor.frameworks import FrameworkError, add_framework
+
+    project = _project_or_exit()
+    try:
+        out = add_framework(project, file, name, kind, force=force)
+    except FrameworkError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    console.print(f"Framework {name} ({kind}) written: {out.name}")
+    console.print(f"Map it: sartor framework map TARGET --framework {name}")
+
+
+@framework_app.command("list")
+def framework_list() -> None:
+    """List frameworks added to this project (S-014)."""
+    from sartor.frameworks import list_frameworks
+
+    project = _project_or_exit()
+    frameworks = list_frameworks(project)
+    if not frameworks:
+        console.print(
+            "No frameworks yet: sartor framework add FILE --name NAME --kind sfia"
+        )
+        return
+    for framework in frameworks:
+        console.print(
+            f"{framework.get('name')}: kind {framework.get('kind')}, "
+            f"{len(framework.get('skills', []))} skills "
+            f"(source {framework.get('source_file')})"
+        )
+
+
+@framework_app.command("map")
+def framework_map(
+    target: str = typer.Argument(...),
+    framework: str = typer.Option(..., "--framework", help="Framework name."),
+) -> None:
+    """Map profile and target to framework codes (S-015)."""
+    import json as _json
+
+    from sartor.frameworks import FrameworkError, map_framework
+
+    project = _project_or_exit()
+    try:
+        out = map_framework(project, target, framework)
+    except FrameworkError as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    counts = _json.loads(out.read_text(encoding="utf-8"))["counts"]
+    console.print(
+        f"Mapped {target} to {framework}: matched {counts['matched']}, "
+        f"target gaps {counts['target_gap']}, profile only {counts['profile_only']}, "
+        f"neither {counts['neither']}"
+    )
+    console.print(f"Wrote {out}; run sartor report {target} to include it")
+
+
+@app.command()
+def research(
+    name: str = typer.Argument(...),
+    enable_search: Annotated[
+        bool,
+        typer.Option(
+            "--enable-search",
+            help="One-off opt-in if search_enabled is not set in config.",
+        ),
+    ] = False,
+    limit: Annotated[int, typer.Option("--limit", help="Results per query.")] = 5,
+) -> None:
+    """Fetch cited company/role context for a target (S-016, opt-in)."""
+    from sartor.config import ConfigurationError, load_config
+    from sartor.search import SearchError, research_target
+
+    project = _project_or_exit()
+    try:
+        config = load_config(start=project)
+        out = research_target(project, name, config, enabled=enable_search, limit=limit)
+    except (ConfigurationError, SearchError) as exc:
+        err_console.print(str(exc))
+        raise typer.Exit(code=1) from exc
+    console.print(f"Wrote {out.name} and research.md in exports/{name}/ (context only)")

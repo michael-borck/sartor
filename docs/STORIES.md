@@ -313,6 +313,97 @@ Acceptance:
 - [manual] A person downloads `resume.pdf` and `pitch.md` from the bundle page.
 Status: done
 
+## M3 Shared vocabulary and context: frameworks and grounding
+
+Both halves are opt-in and neither changes what counts as evidence.
+Framework data is always user-supplied; search results are context
+with citations, never support for a resume claim.
+
+### S-014 Add a user-supplied framework with `sartor framework add`
+As an applicant, I add my own SFIA/O*NET/ESCO/AQF/custom framework file
+(CSV or JSON) once, and Sartor stores it normalized in my project.
+Screens: none (CLI)
+Acceptance:
+- [self] `framework add FILE --name demo --kind sfia` writes
+  `frameworks/demo.json`: skills with code, name, optional level,
+  description, keywords; source filename and sha256 recorded.
+- [unit] CSV requires `code,name`; JSON accepts a list or
+  `{"skills": [...]}`; keywords split on `;` or `|`.
+- [self] Missing code/name, a duplicate code, an unknown kind, or an
+  empty framework fails naming the row; nothing is written.
+- [self] `framework list` shows name, kind, and skill count; no
+  framework data ships in the package itself.
+Status: done
+UX:
+- Flow: `sartor framework add FILE --name NAME --kind sfia|onet|esco|aqf|custom` -> counts -> next step. Re-adding needs --force.
+- Words: "framework" and "framework skill"; never bundled/built-in data.
+- Access: errors name the file, row, and fix.
+
+### S-015 Map profile and target to framework codes
+As an applicant, I run `sartor framework map acme --framework sfia` and
+see, per framework code, whether the target asks for it, whether my
+profile evidences it, and the span ids behind the profile match.
+Screens: serve target review (framework table)
+Depends: S-014, S-004, S-005
+Acceptance:
+- [self] Writes `exports/acme/framework-sfia.json`: per skill,
+  profile status (evidenced/weak/gap), target status, alignment
+  (matched/target gap/profile only/neither), scores, matched
+  requirement text, and profile evidence span ids.
+- [unit] Matching is deterministic (no model call): skill name, code,
+  and keywords matched against profile text/source spans and target
+  requirements/keywords.
+- [self] `sartor report acme` includes a Framework section by code when
+  a mapping exists, and coverage.json embeds it; report numbers still
+  match verify counts.
+- [self] The serve target page shows the same table and offers mapping
+  per added framework.
+Status: done
+UX:
+- Flow: choose framework -> map -> table by code; gaps keep the words
+  "add evidence or accept the gap".
+- Words: "map" (verb), "alignment" values exactly as written above.
+- Access: status is a word, never colour alone.
+
+### S-016 Opt-in search grounding with derived queries only
+As an applicant, I run `sartor research acme` after enabling search and
+get cited company/role context; no resume text ever leaves my machine.
+Screens: serve target review (research section)
+Depends: S-005
+Acceptance:
+- [unit] Queries are built from target fields only (title, organisation,
+  keywords); a test profile's name/summary/bullets appear in no query.
+- [self] Without `search_enabled: true` in config or `--enable-search`,
+  the command refuses and explains the opt-in; nothing is sent.
+- [self] Providers: duckduckgo (no key), brave, serper (key via
+  `${ENV_VAR}`), searxng (configured base URL), or `auto` fallback in
+  that order, first non-empty result set wins; failures name the provider.
+- [self] Writes `research.json` + `research.md`: every result carries
+  title, URL, snippet, and the exact query that produced it, headed
+  "Context only — never evidence for a resume claim."
+- [unit] Search code is never called by tailor/verify; research cannot
+  change a verdict (planted-trap bullet stays unsupported).
+Status: done
+UX:
+- Flow: enable once in `sartor.yaml` (or one-off flag) -> research -> cited context in bundle and on the target page.
+- Words: "research" and "grounding" for the feature; results are "context", never "evidence".
+- Access: provider used and each query are printed before results.
+
+### S-017 Framework and research surfaces in `serve`, manifest updated
+As an applicant using the web UI, I add a framework file, map a target,
+and run research from the browser, and my manifest records both.
+Screens: serve home (frameworks), target review (framework + research)
+Depends: S-013, S-015, S-016
+Acceptance:
+- [self] Home lists frameworks and accepts an upload (name + kind).
+- [self] Target page shows framework mappings and research results
+  with URLs, and offers Map/Research actions; downloads allow the
+  framework/research JSON and Markdown.
+- [unit] `manifest.json` inputs record framework files used by an
+  existing mapping and the research file hash when present.
+- [self] No search or provider call happens on page load.
+Status: done
+
 ## Seed data
 
 `examples/jane-doe/` ships in the repo and drives every `[self]` and
@@ -331,8 +422,6 @@ Status: done
 ## Later
 
 - Selection-criteria response documents generated from a target.
-- M3: SFIA / O*NET / ESCO mapping (user-supplied data only); opt-in
-  web-search grounding with derived queries only.
 - M4: Tauri desktop shell over `serve`; signed installers.
 - Job-ad URL fetching; selection-criteria response documents.
 

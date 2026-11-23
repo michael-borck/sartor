@@ -555,6 +555,25 @@ def build_manifest(
             project / "exports" / target / "tailored.json"
         ),
         "sources": sources,
+        "frameworks": [
+            _file_entry(path)
+            for mapping in sorted(
+                (project / "exports" / target).glob("framework-*.json")
+            )
+            if (
+                path := project
+                / "frameworks"
+                / (mapping.name.removeprefix("framework-"))
+            ).is_file()
+        ],
+        "framework_mappings": [
+            _file_entry(path)
+            for path in sorted((project / "exports" / target).glob("framework-*.json"))
+            if path.is_file()
+        ],
+        "research": _optional_file_entry(
+            project / "exports" / target / "research.json"
+        ),
     }
     return {
         "sartor_version": __version__,

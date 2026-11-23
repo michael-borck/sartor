@@ -1,4 +1,4 @@
-"""Coverage and gap report (S-008).
+"""Coverage and gap report (S-008, framework section S-015).
 
 Per requirement: evidenced (with its bullet), weak, or gap — plus the
 ATS keyword table. Matching is deterministic word overlap against
@@ -181,6 +181,38 @@ def _render_md(
             lines.append(f"- {row['requirement']} — {GAP_PHRASE}.")
     else:
         lines.append("No gaps.")
+    for mapping in coverage.get("frameworks", []) or []:
+        lines.extend(
+            [
+                "",
+                f"## Framework — {mapping.get('framework', '')} ({mapping.get('kind', '')})",
+                "",
+            ]
+        )
+        counts = mapping.get("counts") or {}
+        lines.append(
+            f"Matched {counts.get('matched', 0)}, target gaps {counts.get('target_gap', 0)}, "
+            f"profile only {counts.get('profile_only', 0)}, neither {counts.get('neither', 0)}."
+        )
+        lines.extend(
+            [
+                "",
+                "| Code | Skill | Profile | Target | Alignment |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
+        for row in mapping.get("skills", []):
+            lines.append(
+                f"| {row.get('code')} | {row.get('name')} | {row.get('profile_status')} | "
+                f"{row.get('target_status')} | {row.get('alignment')} |"
+            )
+        target_gaps = [
+            r for r in mapping.get("skills", []) if r.get("alignment") == "target_gap"
+        ]
+        if target_gaps:
+            lines.append("")
+            for row in target_gaps:
+                lines.append(f"- {row.get('code')} {row.get('name')} — {GAP_PHRASE}.")
     lines.extend(["", "## Keywords (ATS)", ""])
     lines.append("| Keyword | Present |")
     lines.append("| --- | --- |")
@@ -209,6 +241,15 @@ def build_report(project: Path, target_name: str) -> Path:
 
     coverage = build_coverage(target, tailored)
     coverage["verify_counts"] = verify["counts"]
+    mappings: list[dict[str, Any]] = []
+    for mapping_path in sorted(
+        (project / "exports" / target_name).glob("framework-*.json")
+    ):
+        try:
+            mappings.append(json.loads(mapping_path.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            continue
+    coverage["frameworks"] = mappings
     markdown = _render_md(coverage, verify, target)
     lowered = markdown.lower()
     for phrase in BANNED_PHRASES:
