@@ -103,16 +103,65 @@ def init(
 
 
 @app.command()
-def doctor() -> None:
-    """Check the configured provider before any generation (S-002)."""
+def doctor(
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print the probe result as JSON (S-025)")
+    ] = False,
+    generate: Annotated[
+        bool, typer.Option("--generate", help="Also prove the model can generate")
+    ] = False,
+    provider: Annotated[
+        str | None, typer.Option("--provider", help="Override the configured provider")
+    ] = None,
+    base_url: Annotated[
+        str | None, typer.Option("--base-url", help="Override the configured base URL")
+    ] = None,
+    model: Annotated[
+        str | None, typer.Option("--model", help="Override the configured model")
+    ] = None,
+    timeout: Annotated[
+        float | None, typer.Option("--timeout", help="Probe timeout in seconds")
+    ] = None,
+) -> None:
+    """Check the configured provider before any generation (S-002, S-025)."""
+    from dataclasses import asdict
+
     from sartor.config import ConfigurationError, load_config
-    from sartor.doctor import run_doctor
+    from sartor.doctor import probe_provider, run_doctor
 
     try:
         config = load_config()
     except ConfigurationError as exc:
         err_console.print(f"config: {exc}")
         raise typer.Exit(code=1) from exc
+    if provider:
+        config["provider"] = provider
+    if base_url:
+        config["base_url"] = base_url
+    if model is not None:
+        config["model"] = model or None
+    if as_json or generate:
+        import json as json_lib
+
+        probe = probe_provider(
+            config,
+            generate=generate,
+            list_timeout=timeout or 15.0,
+            generate_timeout=timeout or 60.0,
+        )
+        if as_json:
+            # Plain stdout, not Rich: callers parse this as JSON.
+            typer.echo(json_lib.dumps(asdict(probe)))
+        else:
+            console.print(probe.message)
+            if probe.models:
+                console.print(
+                    f"models ({len(probe.models)}): " + ", ".join(probe.models[:10])
+                )
+        ready = probe.ok if generate else probe.connected
+        if not ready:
+            raise typer.Exit(code=1)
+        return
     result = run_doctor(config)
     target = console if result.ok else err_console
     for line in result.lines:

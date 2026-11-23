@@ -143,7 +143,13 @@
           <label for="base_url">Base URL</label>
           <input id="base_url" type="url" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434/v1">
           <label for="model">Model</label>
-          <input id="model" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. qwen3:4b">
+          <input id="model" type="text" list="model-list" autocomplete="off" spellcheck="false" placeholder="e.g. qwen3:4b — or Refresh models">
+          <datalist id="model-list"></datalist>
+          <div class="actions">
+            <button id="btn-models" class="secondary" type="button">Refresh models</button>
+            <button id="btn-test" class="secondary" type="button">Test connection</button>
+          </div>
+          <p id="probe-state" class="state" aria-live="polite">Refresh pulls the model list from the provider; Test also proves the selected model can reply. Neither saves anything.</p>
           <label for="theme">Resume theme</label>
           <select id="theme">
             <option value="ats-plain">ats-plain</option>
@@ -230,7 +236,23 @@ async function loadSettings(projectPath) {
   $("key-state").textContent = settings.api_key_set
     ? "API key: saved. Leave the field blank to keep it."
     : "API key: not saved.";
+  applyProviderDefaults();
+  $("probe-state").textContent = "Refresh pulls the model list from the provider; Test also proves the selected model can reply. Neither saves anything.";
   return settings;
+}
+
+const PROVIDER_DEFAULTS = {
+  "openai-compatible": { base_url: "http://localhost:11434/v1", placeholder: "e.g. qwen3:4b — or Refresh models" },
+  "anthropic": { base_url: "https://api.anthropic.com", placeholder: "e.g. claude-sonnet-4-5 — or Refresh models" }
+};
+
+function applyProviderDefaults() {
+  const defaults = PROVIDER_DEFAULTS[$("provider").value];
+  if (!defaults) return;
+  const known = Object.values(PROVIDER_DEFAULTS).map(item => item.base_url);
+  const current = $("base_url").value.trim();
+  if (!current || known.includes(current)) $("base_url").value = defaults.base_url;
+  $("model").placeholder = defaults.placeholder;
 }
 
 function collectSettings() {
@@ -298,6 +320,46 @@ $("project_path").onchange = async () => {
     $("err").textContent = String(error);
   }
 };
+
+async function runProbe(generate, button) {
+  const state = $("probe-state");
+  const typedModel = $("model").value.trim();
+  $("btn-models").disabled = true;
+  $("btn-test").disabled = true;
+  state.textContent = generate ? "Testing connection (first local model load can take a while)…" : "Refreshing models…";
+  try {
+    const result = await invoke("probe_provider", {
+      projectPath: $("project_path").value.trim(),
+      settings: collectSettings(),
+      generate: !!generate
+    });
+    if (Array.isArray(result.models) && result.models.length) {
+      $("model-list").innerHTML = result.models
+        .map(name => "<option value=\"" + escapeHtml(name) + "\"></option>")
+        .join("");
+    }
+    // Never overwrite what the person typed; only report against it.
+    $("model").value = typedModel;
+    const prefix = result.ok ? "OK: " : (result.connected ? "Connected: " : "Failed: ");
+    let message = prefix + (result.message || result.status || "");
+    if (result.model_offered === false && typedModel) {
+      message += " Pick a model from the refreshed list.";
+    }
+    if (result.ok && result.reply) {
+      message += " Reply: " + result.reply;
+    }
+    state.innerHTML = "<strong>" + escapeHtml(result.status || "") + ".</strong> " + escapeHtml(message);
+  } catch (error) {
+    state.textContent = "Failed: " + String(error);
+  } finally {
+    $("btn-models").disabled = false;
+    $("btn-test").disabled = false;
+  }
+}
+
+$("btn-models").onclick = async () => { await runProbe(false); };
+$("btn-test").onclick = async () => { await runProbe(true); };
+$("provider").onchange = () => { applyProviderDefaults(); };
 
 $("btn-save").onclick = async () => {
   await boot(collectSettings(), false);

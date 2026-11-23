@@ -5,6 +5,6 @@ source span, nothing invented. See docs/BRIEF.md, docs/SPEC.md and
 docs/STORIES.md in the repository.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = ["__version__"]

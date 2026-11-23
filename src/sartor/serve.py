@@ -26,7 +26,7 @@ from sartor.config import load_config
 
 if TYPE_CHECKING:  # runtime names are injected by create_app below
     from fastapi import Request, UploadFile
-    from fastapi.responses import FileResponse, RedirectResponse
+    from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from sartor.ingest import SUPPORTED_SUFFIXES
 from sartor.profile import load_sources
 from sartor.providers import get_provider
@@ -64,6 +64,12 @@ def download_media_type(filename: str) -> str | None:
         return "application/json" if filename.endswith(".json") else "text/markdown"
     return None
 
+
+FRAMEWORK_TEMPLATE_CSV = """code,name,level,description,keywords
+EXAMPLE-SKILL,Example skill name,,What this skill covers in one sentence,keyword one;keyword two
+EXAMPLE-SKILL,Example skill name,3,Descriptor for level 3 work if your framework uses levels,supervised;routine
+EXAMPLE-SKILL,Example skill name,5,Descriptor for level 5 work (same code repeats per level),autonomous;complex
+"""
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -205,6 +211,61 @@ def project_summary(project: Path, config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def workflow_steps(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    """Pipeline checklist derived from a project summary (S-024)."""
+    config = summary.get("config") or {}
+    targets = summary.get("targets") or []
+    profile = summary.get("profile") or {}
+    rendered = any(
+        any(f.get("name") == "resume.md" for f in t.get("files") or [])
+        for t in targets
+    )
+    return [
+        {
+            "key": "provider",
+            "label": "Configure a provider and model",
+            "done": bool(config.get("provider") and config.get("model")),
+            "optional": False,
+            "next": "Set provider/model, then Refresh models and Test connection.",
+        },
+        {
+            "key": "sources",
+            "label": "Add source material",
+            "done": bool(summary.get("sources")),
+            "optional": False,
+            "next": "Ingest an existing resume and any supporting evidence.",
+        },
+        {
+            "key": "profile",
+            "label": "Build and check the profile",
+            "done": bool(profile.get("present") and profile.get("valid")),
+            "optional": False,
+            "next": "Build profile, review profile.json, then Check profile.",
+        },
+        {
+            "key": "framework",
+            "label": "Add an industry framework (optional)",
+            "done": bool(summary.get("frameworks")),
+            "optional": True,
+            "next": "Upload your own SFIA/O*NET/custom CSV or JSON, if you use one.",
+        },
+        {
+            "key": "target",
+            "label": "Add a job target",
+            "done": bool(targets),
+            "optional": False,
+            "next": "Paste a job advertisement to parse its requirements.",
+        },
+        {
+            "key": "tailor",
+            "label": "Tailor, verify, then render",
+            "done": rendered,
+            "optional": False,
+            "next": "Open the target: Tailor -> Verify -> Report -> Render.",
+        },
+    ]
+
+
 def target_detail(project: Path, name: str) -> dict[str, Any] | None:
     """Target + tailored bullets with verdicts + coverage, for review."""
     safe_target_name(name)
@@ -330,7 +391,7 @@ def _page(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title)} — Sartor</title><style>{_CSS}</style></head>
 <body><header><span class="brand">Sartor</span>
-<nav><a href="/{token_suffix}">Project</a><a href="/profile{token_suffix}">Profile</a></nav>
+<nav><a href="/{token_suffix}">Project</a><a href="/profile{token_suffix}">Profile</a><a href="/help{token_suffix}">Help</a></nav>
 <span class="small">Local review only · keys stay on this computer</span></header>
 <main>{notice}{problem}{body}</main></body></html>"""
 
@@ -363,6 +424,125 @@ def _target_rows(summary: dict[str, Any], token_suffix: str) -> str:
         "<th>Must / nice</th><th>Tailored</th><th>Verify</th><th>Files</th>"
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
+
+
+def _checklist_html(summary: dict[str, Any], token_suffix: str) -> str:
+    esc = html_lib.escape
+    steps = workflow_steps(summary)
+    rows = []
+    next_step: dict[str, Any] | None = None
+    for index, step in enumerate(steps, start=1):
+        if step["done"]:
+            state = "done"
+        elif step["optional"]:
+            state = "optional"
+        else:
+            state = "todo"
+            if next_step is None:
+                next_step = step
+        marker = " — next" if step is next_step else ""
+        rows.append(
+            f"<tr><td>{index}</td><td>{esc(str(step['label']))}</td>"
+            f"<td><span class='verdict'>{state}{marker}</span></td>"
+            f"<td>{'' if step['done'] else esc(str(step['next']))}</td></tr>"
+        )
+    intro = (
+        f"Next: {esc(str(next_step['next']))}"
+        if next_step
+        else "All steps done. Open a target to re-tailor or render again."
+    )
+    return (
+        "<section class='panel'><h2>Getting started</h2>"
+        f"<p>{intro} See <a href='/help{token_suffix}'>Help</a> for the full guide.</p>"
+        "<table><thead><tr><th>Step</th><th>What</th><th>State</th><th>Do this</th>"
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></section>"
+    )
+
+
+def _help_html(token_suffix: str) -> str:
+    formats = html_lib.escape(", ".join(SUPPORTED_SUFFIXES))
+    body = f"""
+<h1>Getting started</h1>
+<p>Sartor tailors a resume from your own evidence. Every claim it keeps must
+trace back to your source material; anything unsupported is flagged, never
+invented. Work through the steps in order — the home page checklist shows
+where you are.</p>
+<section class="panel"><h2>The workflow</h2>
+<ol>
+<li><strong>Provider.</strong> Choose OpenAI-compatible (including local
+Ollama) or Anthropic, then <em>Refresh models</em> to pull the model list
+from the provider and <em>Test connection</em> to prove the selected model
+can reply. In the desktop app these live under Project &amp; Settings; in
+this web UI they are in the Provider panel and use the saved config.</li>
+<li><strong>Sources.</strong> Add an existing resume plus any supporting
+evidence (publications, project notes, performance material). Accepted:
+{formats}. More evidence beats one old resume. Originals are never
+modified.</li>
+<li><strong>Profile.</strong> Build the master profile from your sources,
+then review and correct <code>profile.json</code> in your editor and run
+Check profile. The profile is the truth every tailored resume draws on.</li>
+<li><strong>Framework (optional).</strong> Add your own industry framework
+file (SFIA, O*NET, ESCO, AQF, or custom). Sartor never bundles or downloads
+framework data. See the framework section below.</li>
+<li><strong>Target.</strong> Paste a job advertisement. Sartor extracts its
+must-haves, nice-to-haves, keywords, and selection criteria, each with the
+verbatim ad sentence behind it.</li>
+<li><strong>Tailor, verify, render.</strong> Tailor selects and rephrases
+only supported profile content. Verify marks every bullet supported, weak,
+or unsupported. Report shows requirement coverage and gaps. Render writes
+the bundle: <code>resume.pdf/docx/md/html/json</code> plus
+<code>pitch.md</code> (Narra) and <code>deck.md</code> (SlideStream)
+handoffs.</li>
+</ol></section>
+<section class="panel"><h2>Frameworks</h2>
+<p>A framework file is a CSV or JSON list of skills. CSV needs at least
+<code>code</code> and <code>name</code>; optional columns are
+<code>level</code>, <code>description</code>, and <code>keywords</code>
+(separate keywords with <code>;</code>). The same code may repeat once per
+level. <a href="/help/framework-template.csv{token_suffix}">Download the
+framework template (CSV)</a> and replace the example rows with your own
+licensed data.</p>
+<p>Mapping a target shows, per code, whether the ad asks for it and whether
+your profile evidences it. Framework voice can word resume bullets in the
+framework's terms, but a resume never prints a skill level: the evidence
+implies seniority. A separate framework statement shows codes by default
+and levels only when you explicitly choose <code>code-level</code>;
+suggested levels stay labelled as suggestions, never assessments.</p>
+</section>
+<section class="panel"><h2>Job targets</h2>
+<p>In this UI, paste the advertisement text. From the CLI, a text file or
+stdin works too: <code>sartor target add NAME --file ad.txt</code>. PDF or
+DOCX advertisements and ad URLs are not parsed yet — copy the text out
+first.</p></section>
+<section class="panel"><h2>Privacy</h2>
+<p>Your project is a plain folder you own. There are no accounts and no
+telemetry. Provider keys are referenced as environment variables (or the
+OS keychain in the desktop app) and are never sent to this browser or
+written into the project. Optional web research is off by default; when
+enabled, its queries are derived from the job target only — never from
+your resume — and results are context, never evidence.</p></section>
+<section class="panel"><h2>Troubleshooting</h2>
+<ul>
+<li><strong>Cannot reach the provider.</strong> Check the base URL. Ollama
+uses <code>http://localhost:11434/v1</code> and must be running
+(<code>ollama serve</code>); Anthropic uses
+<code>https://api.anthropic.com</code>. Test connection names the exact
+failure.</li>
+<li><strong>Model not offered.</strong> Refresh models and pick from the
+returned list. Lists can include embedding models, which cannot generate —
+Test connection catches those.</li>
+<li><strong>PDF missing from a bundle.</strong> Rendering the PDF needs
+WeasyPrint's native libraries; the rest of the bundle is still written and
+the error line names the fix.</li>
+<li><strong>Scanned PDFs.</strong> Image-only PDFs have no text to ingest
+(there is no OCR yet); use a text PDF or another format.</li>
+</ul>
+<p>CLI equivalents: <code>sartor ingest</code>, <code>sartor profile
+build/check</code>, <code>sartor target add</code>, <code>sartor
+tailor</code>, <code>sartor verify</code>, <code>sartor report</code>,
+<code>sartor render</code>, and <code>sartor doctor --generate</code> for
+Test connection.</p></section>"""
+    return _page("Getting started", body, token_suffix=token_suffix)
 
 
 def _home_html(
@@ -412,22 +592,33 @@ def _home_html(
     body = f"""
 <h1>Project review</h1>
 <p class="muted">Project: <code>{esc(summary["project"])}</code> · Sartor {esc(summary["version"])}</p>
-<section class="panel"><h2>Provider</h2>
+{_checklist_html(summary, token_suffix)}
+<section class="panel"><h2>Step 1 · Provider</h2>
+<p class="muted">The model Sartor calls for building, parsing, and tailoring. Refresh pulls its model list; Test proves the saved model can reply. Change these values in <code>sartor.yaml</code> or desktop Project &amp; Settings.</p>
 <p>{esc(str(summary["config"].get("provider") or "not configured"))} · model: {esc(str(summary["config"].get("model") or "unset"))}<br>
-<span class="muted">Base URL: {esc(str(summary["config"].get("base_url") or ""))} · key configured: {"yes" if summary["config"]["api_key_set"] else "no"} · theme: {esc(str(summary["config"]["theme"]))}</span></p></section>
-<section class="panel"><h2>Profile</h2><p>{profile_text}</p>
+<span class="muted">Base URL: {esc(str(summary["config"].get("base_url") or ""))} · key configured: {"yes" if summary["config"]["api_key_set"] else "no"} · theme: {esc(str(summary["config"]["theme"]))}</span></p>
+<div class="actions">
+<button type="button" class="secondary" id="btn-models">Refresh models</button>
+<button type="button" id="btn-test">Test connection</button></div>
+<p id="probe-state" class="small" aria-live="polite"></p>
+<p id="probe-models" class="evidence"></p></section>
+<section class="panel"><h2>Step 2 · Sources</h2>
+<p class="muted">Your evidence: an existing resume plus anything that backs it up. Every later claim must trace to these files.</p>
+{sources_table}
+<form method="post" action="/actions/ingest{token_suffix}" enctype="multipart/form-data">
+<label for="files">Add source files ({esc(", ".join(SUPPORTED_SUFFIXES))})</label>
+<input id="files" type="file" name="files" multiple required>
+<button type="submit">Ingest sources</button></form></section>
+<section class="panel"><h2>Step 3 · Profile</h2>
+<p class="muted">The master profile distilled from your sources. Review and correct it by hand; it is the truth for every tailored resume.</p>
+<p>{profile_text}</p>
 <p><a href="/profile{token_suffix}">Review profile</a></p>
 <div class="actions"><form method="post" action="/actions/profile/build{token_suffix}">
 <label class="check"><input type="checkbox" name="force" value="true"> replace existing profile</label>
 <button type="submit">Build profile</button></form>
 <form method="post" action="/actions/profile/check{token_suffix}"><button class="secondary" type="submit">Check profile</button></form></div></section>
-<section class="panel"><h2>Sources</h2>{sources_table}
-<form method="post" action="/actions/ingest{token_suffix}" enctype="multipart/form-data">
-<label for="files">Add source files ({esc(", ".join(SUPPORTED_SUFFIXES))})</label>
-<input id="files" type="file" name="files" multiple required>
-<button type="submit">Ingest sources</button></form></section>
-<section class="panel"><h2>Frameworks</h2>
-<p class="muted">Framework data is user-supplied (CSV/JSON with code,name columns; a code may repeat at different levels); nothing is bundled or fetched.</p>
+<section class="panel"><h2>Step 4 · Frameworks (optional)</h2>
+<p class="muted">Framework data is user-supplied (CSV/JSON with code,name columns; a code may repeat at different levels); nothing is bundled or fetched. <a href="/help/framework-template.csv{token_suffix}">Download the framework template (CSV)</a>.</p>
 {framework_rows}
 <form method="post" action="/actions/frameworks{token_suffix}" enctype="multipart/form-data">
 <label for="fw-name">Framework name</label><input id="fw-name" type="text" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._-]*">
@@ -438,13 +629,45 @@ def _home_html(
 <input id="fw-file" type="file" name="file" accept=".csv,.json" required>
 <label class="check"><input type="checkbox" name="force" value="true"> replace existing framework</label>
 <button type="submit">Add framework</button></form></section>
-<section class="panel"><h2>Targets</h2>{_target_rows(summary, token_suffix)}
+<section class="panel"><h2>Step 5 · Targets</h2>
+<p class="muted">One target per job advertisement. Open a target to tailor, verify, report, and render its bundle (Step 6).</p>
+{_target_rows(summary, token_suffix)}
 <form method="post" action="/actions/targets{token_suffix}">
 <label for="target-name">New target name</label><input id="target-name" type="text" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._-]*">
 <label for="ad-text">Paste job advertisement</label><textarea id="ad-text" name="ad_text" required></textarea>
 <label class="check"><input type="checkbox" name="force" value="true"> replace existing target</label>
 <button type="submit">Parse job ad</button></form></section>
-{token_field}"""
+{token_field}
+<script>
+async function probe(path, button) {{
+  const state = document.getElementById("probe-state");
+  const models = document.getElementById("probe-models");
+  state.textContent = "Contacting provider…";
+  models.textContent = "";
+  button.disabled = true;
+  try {{
+    const response = await fetch(path, {{
+      method: "POST",
+      headers: {{"Content-Type": "application/json"}},
+      body: "{{}}"
+    }});
+    const data = await response.json();
+    state.textContent = (data.ok ? "OK: " : data.connected ? "Connected: " : "Failed: ") + (data.message || data.status);
+    if (data.models && data.models.length) {{
+      models.textContent = "Models: " + data.models.join(", ");
+    }}
+    if (data.model_offered === false) {{
+      state.textContent += " The saved model is not in this list.";
+    }}
+  }} catch (error) {{
+    state.textContent = "Failed: " + error;
+  }} finally {{
+    button.disabled = false;
+  }}
+}}
+document.getElementById("btn-models").onclick = e => probe("/api/provider/models{token_suffix}", e.target);
+document.getElementById("btn-test").onclick = e => probe("/api/provider/test{token_suffix}", e.target);
+</script>"""
     return _page("Project review", body, ok, error, token_suffix)
 
 
@@ -759,7 +982,12 @@ def create_app(
             Request,
             UploadFile,
         )
-        from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+        from fastapi.responses import (
+            FileResponse,
+            HTMLResponse,
+            PlainTextResponse,
+            RedirectResponse,
+        )
 
         # FastAPI resolves endpoint annotations via module globals.
         globals().update(
@@ -767,6 +995,7 @@ def create_app(
             UploadFile=UploadFile,
             RedirectResponse=RedirectResponse,
             FileResponse=FileResponse,
+            PlainTextResponse=PlainTextResponse,
         )
     except ImportError as exc:
         raise RuntimeError('Serve needs FastAPI: pip install "sartor[serve]"') from exc
@@ -821,6 +1050,50 @@ def create_app(
         if detail is None:
             raise HTTPException(status_code=404, detail="target not found")
         return detail
+
+    async def _probe(request: Request, *, generate: bool) -> dict[str, Any]:
+        from dataclasses import asdict
+
+        from sartor.doctor import probe_provider
+
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        candidate = dict(active_config)
+        for key in ("provider", "base_url"):
+            if payload.get(key):
+                candidate[key] = str(payload[key])
+        if "model" in payload:
+            candidate["model"] = str(payload["model"]) or None
+        if payload.get("api_key"):
+            candidate["api_key"] = str(payload["api_key"])
+        result = probe_provider(candidate, generate=generate, provider=provider)
+        return asdict(result)
+
+    @app.post("/api/provider/models", dependencies=[Depends(guard)])
+    async def api_provider_models(request: Request) -> dict[str, Any]:
+        return await _probe(request, generate=False)
+
+    @app.post("/api/provider/test", dependencies=[Depends(guard)])
+    async def api_provider_test(request: Request) -> dict[str, Any]:
+        return await _probe(request, generate=True)
+
+    @app.get("/help", response_class=HTMLResponse, dependencies=[Depends(guard)])
+    def help_page(request: Request) -> str:
+        return _help_html(suffix(request))
+
+    @app.get("/help/framework-template.csv", dependencies=[Depends(guard)])
+    def framework_template() -> PlainTextResponse:
+        return PlainTextResponse(
+            FRAMEWORK_TEMPLATE_CSV,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": 'attachment; filename="framework-template.csv"'
+            },
+        )
 
     @app.get("/", response_class=HTMLResponse, dependencies=[Depends(guard)])
     def home(request: Request, ok: str | None = None, error: str | None = None) -> str:

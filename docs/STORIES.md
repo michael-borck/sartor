@@ -566,6 +566,71 @@ UX:
 - Words: "Download for <platform>"; other platforms named in full.
 - Access: detection is an enhancement; links work with JavaScript off.
 
+## M5 First-run clarity (0.3.1): help and provider setup
+
+The 0.3.0 audit found every control visible but the workflow invisible:
+a new person could not tell the step order, which files go where, or
+whether their provider settings work before generation fails.
+
+### S-024 In-app Getting Started help and workflow checklist
+As a new applicant, I can see the whole workflow, what to do next, and
+which files each step wants, without leaving the local app.
+Screens: serve home (checklist), serve `/help`
+Depends: S-013
+Acceptance:
+- [self] Home opens with a live workflow checklist in pipeline order
+  (provider → sources → profile → framework optional → target →
+  tailor/verify/render); each step shows done/todo as a word and the
+  next action. Panels below follow the same order.
+- [self] A local `/help` page explains the workflow, accepted source
+  formats, job-target input, framework file shape, privacy rules, and
+  troubleshooting; the header nav links to it. No page load makes a
+  provider or search call.
+- [self] A downloadable framework template (`framework-template.csv`)
+  shows the `code,name,level,description,keywords` columns; the help
+  page and Frameworks panel link to it.
+- [unit] The help page and checklist render from the same project
+  summary the API returns; no resume text is added to help content.
+Status: done
+UX:
+- Flow: open app -> checklist names the next unfinished step -> Help
+  for detail. Words match the CLI ("source", "profile", "target").
+- Access: done/todo is a word, never colour alone.
+
+### S-025 Provider Test connection and Refresh models
+As an applicant setting up a provider, I pull the model list from the
+provider and prove the selected model can generate, before I save.
+Screens: desktop settings, serve home (Provider panel), `sartor doctor --json`
+Depends: S-002, S-021
+Acceptance:
+- [unit] `probe_provider` returns a structured result (status, models,
+  model offered, generated, message) for both provider families:
+  unreachable, auth, connected, connected-no-model, model-not-offered,
+  generation-failed, and ok are distinct statuses; green/ok requires a
+  tiny generation reply, not just a model list.
+- [self] `sartor doctor --json [--generate]` prints that result and
+  accepts `--provider/--base-url/--model/--timeout` overrides; a key
+  arrives only via config `${ENV_VAR}` or `SARTOR_API_KEY`, never as a
+  command-line value, and is never printed.
+- [self] Serve exposes token-guarded `POST /api/provider/models` and
+  `POST /api/provider/test`; blank `api_key` means "keep the saved
+  key". The home Provider panel offers Refresh models and Test
+  connection against the saved config.
+- [self] Desktop Settings offers Refresh models (searchable model
+  combobox) and Test connection using the unsaved field values (blank
+  key = keychain key) via the Python probe; clicking either saves
+  nothing. Switching provider offers that provider's default base URL.
+- [unit] Probing uses a short timeout, preserves a manually typed
+  model even when `/models` fails, and never auto-selects the first
+  model (a list may contain embedding models).
+Status: done
+UX:
+- Flow: enter provider/key -> Refresh models -> pick model -> Test
+  connection -> Save & start. Explicit clicks only; no polling.
+- Words: "Refresh models", "Test connection"; statuses say the fix
+  ("Cannot reach … — is Ollama running?").
+- Access: result is text beside the buttons, never colour alone.
+
 ## Seed data
 
 `examples/jane-doe/` ships in the repo and drives every `[self]` and

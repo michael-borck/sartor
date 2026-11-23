@@ -1,7 +1,7 @@
 {
   "name": "sartor-desktop",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Sartor Tauri shell",
   "scripts": {
     "tauri": "tauri",

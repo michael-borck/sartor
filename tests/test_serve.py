@@ -294,3 +294,62 @@ def test_serve_framework_and_research(tmp_path: Path):
     )
     sql = {row["code"]: row for row in mapping["skills"]}["SQL"]
     assert sql["confirmed_level"] == 4
+
+
+def test_help_checklist_and_template(tmp_path: Path):
+    client, _ = _client(tmp_path)
+    home = client.get("/")
+    assert home.status_code == 200
+    assert "Getting started" in home.text
+    assert "Refresh models" in home.text
+    assert "Test connection" in home.text
+    # Panels follow pipeline order: Sources before Profile.
+    assert home.text.index("Step 2") < home.text.index("Step 3")
+
+    help_page = client.get("/help")
+    assert help_page.status_code == 200
+    assert "The workflow" in help_page.text
+    assert "framework-template.csv" in help_page.text
+    assert SECRET not in help_page.text
+
+    template = client.get("/help/framework-template.csv")
+    assert template.status_code == 200
+    assert template.text.splitlines()[0] == "code,name,level,description,keywords"
+
+
+def test_provider_probe_endpoints(tmp_path: Path):
+    from sartor.doctor import PROBE_PROMPT
+
+    project = seed_project(tmp_path)
+    config = {
+        "provider": "openai-compatible",
+        "model": "fake-1",
+        "api_key": SECRET,
+        "timeout": 5,
+    }
+    fake = FakeProvider({PROBE_PROMPT: "OK"}, models=["fake-1", "fake-2"])
+    app = create_app(project, config=config, provider=fake)
+    client = TestClient(app)
+
+    models = client.post("/api/provider/models", json={})
+    assert models.status_code == 200
+    payload = models.json()
+    assert payload["status"] == "connected"
+    assert payload["models"] == ["fake-1", "fake-2"]
+    assert SECRET not in models.text
+
+    tested = client.post("/api/provider/test", json={})
+    assert tested.status_code == 200
+    payload = tested.json()
+    assert payload["status"] == "ok"
+    assert payload["generated"] is True
+    assert payload["reply"] == "OK"
+    assert SECRET not in tested.text
+
+
+def test_provider_probe_endpoints_token_gated(tmp_path: Path):
+    client, _ = _client(tmp_path, token="tok123")
+    assert client.post("/api/provider/models", json={}).status_code == 401
+    assert client.get("/help").status_code == 401
+    ok = client.post("/api/provider/models?token=tok123", json={})
+    assert ok.status_code == 200

@@ -1,6 +1,6 @@
 [package]
 name = "sartor-desktop"
-version = "0.3.0"
+version = "0.3.1"
 description = "Sartor — privacy-first resume tailoring, on your desktop"
 authors = ["Michael Borck <michael.borck@curtin.edu.au>"]
 license = "MIT"

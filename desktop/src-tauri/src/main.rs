@@ -26,7 +26,7 @@ use tauri_plugin_updater::UpdaterExt;
 use uuid::Uuid;
 
 /// The Sartor release the runtime installs; bump with PyPI releases.
-const SARTOR_VERSION: &str = "0.3.0";
+const SARTOR_VERSION: &str = "0.3.1";
 
 struct DesktopState {
     child: Mutex<Option<Child>>,
@@ -391,6 +391,95 @@ async fn start_server(
     .map_err(|e| e.to_string())?
 }
 
+/// CLI arguments for a transient `sartor doctor --json` probe (S-025).
+/// The API key never appears here; it travels via the environment.
+fn probe_args(provider_settings: &ProviderSettings, generate: bool) -> Vec<String> {
+    let mut args: Vec<String> = vec!["doctor".into(), "--json".into()];
+    if generate {
+        args.push("--generate".into());
+    }
+    args.push("--provider".into());
+    args.push(provider_settings.provider.trim().to_string());
+    if !provider_settings.base_url.trim().is_empty() {
+        args.push("--base-url".into());
+        args.push(provider_settings.base_url.trim().to_string());
+    }
+    args.push("--model".into());
+    args.push(provider_settings.model.trim().to_string());
+    args
+}
+
+fn probe_api_key(provider_settings: &ProviderSettings) -> Option<String> {
+    if provider_settings.clear_api_key {
+        return None;
+    }
+    let typed = provider_settings.api_key.trim();
+    if !typed.is_empty() {
+        return Some(typed.to_string());
+    }
+    settings::provider_api_key()
+}
+
+fn probe_blocking(
+    app: AppHandle,
+    project_path: String,
+    provider_settings: ProviderSettings,
+    generate: bool,
+) -> Result<serde_json::Value, String> {
+    let provider = provider_settings.provider.trim();
+    if !["openai-compatible", "anthropic"].contains(&provider) {
+        return Err("Pick a provider: openai-compatible or anthropic".into());
+    }
+    let bin = ensure_runtime(&app, false)?;
+    let mut cmd = command(&bin);
+    cmd.args(probe_args(&provider_settings, generate));
+    let project = PathBuf::from(project_path.trim());
+    if project.is_dir() {
+        cmd.current_dir(&project);
+    }
+    match probe_api_key(&provider_settings) {
+        Some(key) => {
+            cmd.env("SARTOR_API_KEY", key);
+        }
+        None => {
+            cmd.env_remove("SARTOR_API_KEY");
+        }
+    }
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Could not run Sartor: {e}"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let json_line = stdout.lines().rev().find(|line| line.trim_start().starts_with('{'));
+    match json_line.and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok()) {
+        Some(value) => Ok(value),
+        None => {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            let detail = if !stderr.is_empty() {
+                stderr
+            } else if !stdout.trim().is_empty() {
+                stdout.trim().to_string()
+            } else {
+                format!("Sartor exited with {}", output.status)
+            };
+            Err(detail)
+        }
+    }
+}
+
+#[tauri::command]
+async fn probe_provider(
+    app: AppHandle,
+    project_path: String,
+    settings: ProviderSettings,
+    generate: bool,
+) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        probe_blocking(app, project_path, settings, generate)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn restart_server(
     app: AppHandle,
@@ -494,6 +583,26 @@ fn run_selftest() -> i32 {
         &mut failures,
     );
 
+    let probe = probe_args(
+        &ProviderSettings {
+            provider: "anthropic".into(),
+            base_url: "https://api.anthropic.com".into(),
+            model: "claude-test".into(),
+            theme: "modern".into(),
+            api_key: "sk-never-in-argv".into(),
+            clear_api_key: false,
+            api_key_set: false,
+        },
+        true,
+    );
+    selftest_check(
+        "probe args carry overrides but never the API key",
+        probe.contains(&"--generate".to_string())
+            && probe.contains(&"claude-test".to_string())
+            && !probe.iter().any(|arg| arg.contains("sk-never-in-argv")),
+        &mut failures,
+    );
+
     let port = free_port().unwrap_or_default();
     selftest_check("choose a free localhost port", port > 0, &mut failures);
     selftest_check(
@@ -581,6 +690,7 @@ fn main() {
             choose_project,
             open_project_folder,
             get_settings,
+            probe_provider,
             start_server,
             restart_server,
             check_update,
