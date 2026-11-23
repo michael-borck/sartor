@@ -537,7 +537,7 @@ Acceptance:
 - [self] Stable aliases are attached after release for direct links:
   `Sartor-macOS-Apple-Silicon.dmg`, `Sartor-macOS-Intel.dmg`,
   `Sartor-Windows-x64-Setup.exe`, and `Sartor-Linux-x86_64.AppImage`.
-Status: todo
+Status: done
 UX:
 - Flow: manual notarize-check -> annotated version tag -> verify assets
   -> release is latest.

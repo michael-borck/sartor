@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sartor is a privacy-first resume tailoring app. Every claim stays traceable to evidence you supplied.">
+  <title>Sartor — Tailor the resume. Keep every claim honest.</title>
+  <link rel="icon" href="assets/sartor-icon.png">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ink: #17202b;
+      --muted: #5b6774;
+      --line: #d8dee6;
+      --bg: #f3f5f7;
+      --panel: #ffffff;
+      --accent: #205a8a;
+      --accent-hover: #174468;
+      --accent-ink: #ffffff;
+      --header: #162433;
+      --code-bg: #111820;
+      --code-ink: #e8edf3;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #e8edf3;
+        --muted: #a7b2bf;
+        --line: #334154;
+        --bg: #111820;
+        --panel: #19222c;
+        --accent: #7ab3df;
+        --accent-hover: #a8cdf0;
+        --accent-ink: #10202f;
+        --header: #0d1620;
+        --code-bg: #080d13;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--accent); }
+    header {
+      background: var(--header);
+      color: #fff;
+    }
+    .header-inner, main, .footer-inner {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 16px 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+      font-family: Georgia, serif;
+      font-size: 24px;
+      text-decoration: none;
+    }
+    .brand img { width: 34px; height: 34px; }
+    header nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 18px; }
+    header nav a { color: #dce8f3; text-decoration: none; }
+    header nav a:hover { text-decoration: underline; }
+    footer nav { display: flex; flex-wrap: wrap; gap: 18px; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
+      gap: 48px;
+      align-items: center;
+      padding: 72px 0 56px;
+    }
+    h1 {
+      font-family: Georgia, serif;
+      font-size: clamp(42px, 6vw, 68px);
+      font-weight: 500;
+      line-height: 1.04;
+      letter-spacing: 0;
+      margin: 0 0 22px;
+    }
+    .lede { font-size: 19px; color: var(--muted); margin: 0 0 28px; max-width: 620px; }
+    .download-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .button {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--accent-ink);
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      padding: 11px 18px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .button:hover { background: var(--accent-hover); }
+    .button.secondary { background: transparent; color: var(--accent); }
+    #download-note { color: var(--muted); font-size: 14px; margin-top: 10px; }
+    .hero-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      border: 1px solid var(--line);
+      background: #162433;
+    }
+    section { padding: 28px 0; border-top: 1px solid var(--line); }
+    h2 { font-size: 28px; line-height: 1.2; margin: 0 0 14px; }
+    h3 { margin: 0 0 6px; }
+    .section-intro { color: var(--muted); max-width: 760px; margin-top: 0; }
+    .downloads { border: 1px solid var(--line); background: var(--panel); }
+    .download-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 16px 18px;
+      border-top: 1px solid var(--line);
+    }
+    .download-item:first-child { border-top: 0; }
+    .download-item p { margin: 2px 0 0; color: var(--muted); }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; padding: 0; list-style: none; counter-reset: steps; }
+    .steps li { counter-increment: steps; padding-top: 14px; border-top: 3px solid var(--accent); }
+    .steps li::before { content: counter(steps); display: block; color: var(--accent); font-weight: 800; margin-bottom: 8px; }
+    .steps p { color: var(--muted); margin: 0; }
+    pre {
+      overflow: auto;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      padding: 18px;
+      border-radius: 5px;
+    }
+    footer { border-top: 1px solid var(--line); margin-top: 32px; }
+    .footer-inner { display: flex; flex-wrap: wrap; gap: 14px 22px; padding: 24px 0 36px; color: var(--muted); }
+    .footer-inner nav { margin-left: 0; }
+    @media (max-width: 820px) {
+      .hero { grid-template-columns: 1fr; padding-top: 44px; gap: 30px; }
+      .steps { grid-template-columns: 1fr; }
+      .download-item { grid-template-columns: 1fr; }
+      nav { width: 100%; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a class="brand" href="./" aria-label="Sartor home"><img src="assets/sartor-icon.png" alt="">Sartor</a>
+    <nav aria-label="Primary">
+      <a href="#download">Download</a>
+      <a href="#how">How it works</a>
+      <a href="https://github.com/michael-borck/sartor">GitHub</a>
+      <a href="https://pypi.org/project/sartor/">PyPI</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="hero">
+    <div>
+      <h1>Tailor the resume. Keep every claim honest.</h1>
+      <p class="lede">Sartor turns the evidence you already have into a resume for one role, then flags anything the sources do not support. Your files stay in a local project; the model is the one you configure.</p>
+      <div class="download-row">
+        <a id="primary-download" class="button" href="https://github.com/michael-borck/sartor/releases/latest">Download Sartor</a>
+        <a class="button secondary" href="#download">All platforms</a>
+      </div>
+      <div id="download-note" aria-live="polite">Choose your platform below, or install the Python package.</div>
+    </div>
+    <img class="hero-image" src="assets/sartor-hero.svg" alt="Illustration of a tailored resume with bullets linked to evidence markers">
+  </div>
+
+  <section id="download">
+    <h2>Download the desktop app</h2>
+    <p class="section-intro">macOS builds are signed and notarized. Windows and Linux builds are unsigned for now. First launch prepares a private Python runtime, so give it about a minute.</p>
+    <div class="downloads">
+      <div class="download-item">
+        <div><h3>macOS — Apple Silicon</h3><p>For M1, M2, M3, and later Apple Silicon Macs.</p></div>
+        <a class="button" href="https://github.com/michael-borck/sartor/releases/latest/download/Sartor-macOS-Apple-Silicon.dmg">Download</a>
+      </div>
+      <div class="download-item">
+        <div><h3>macOS — Intel</h3><p>For older Intel Macs.</p></div>
+        <a class="button" href="https://github.com/michael-borck/sartor/releases/latest/download/Sartor-macOS-Intel.dmg">Download</a>
+      </div>
+      <div class="download-item">
+        <div><h3>Windows — x64</h3><p>Installer for 64-bit Windows.</p></div>
+        <a class="button" href="https://github.com/michael-borck/sartor/releases/latest/download/Sartor-Windows-x64-Setup.exe">Download</a>
+      </div>
+      <div class="download-item">
+        <div><h3>Linux — x86_64</h3><p>Portable AppImage for 64-bit Linux.</p></div>
+        <a class="button" href="https://github.com/michael-borck/sartor/releases/latest/download/Sartor-Linux-x86_64.AppImage">Download</a>
+      </div>
+    </div>
+    <p><a href="https://github.com/michael-borck/sartor/releases/latest">Release notes and every installer format</a></p>
+  </section>
+
+  <section id="how">
+    <h2>How Sartor works</h2>
+    <ol class="steps">
+      <li><h3>Bring your evidence</h3><p>Add an existing resume and other sources in PDF, DOCX, HTML, Markdown, text, or JSON Resume form.</p></li>
+      <li><h3>Tailor to one role</h3><p>Sartor selects and rephrases supported experience for the job, optionally using framework language without printing a level claim.</p></li>
+      <li><h3>Verify before you send</h3><p>Every generated bullet keeps its source evidence. Weak and unsupported claims are flagged for your decision—not quietly polished into facts.</p></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Private by design</h2>
+    <p class="section-intro">No account, sync, or telemetry. Sartor reads and writes a plain project folder you own. Use local Ollama, another OpenAI-compatible endpoint, or Anthropic; API keys entered in the desktop app stay in your OS keychain.</p>
+  </section>
+
+  <section>
+    <h2>Prefer Python?</h2>
+    <p class="section-intro">The same engine is available as a package and command-line tool.</p>
+    <pre><code>uvx --from "sartor[all]" sartor --help
+
+# or install it
+pip install "sartor[all]"</code></pre>
+  </section>
+</main>
+<footer>
+  <div class="footer-inner">
+    <span>Sartor 0.3.0 · MIT licensed</span>
+    <nav aria-label="Footer">
+      <a href="https://github.com/michael-borck/sartor">GitHub</a>
+      <a href="https://github.com/michael-borck/sartor/releases/latest">Releases</a>
+      <a href="https://pypi.org/project/sartor/">PyPI</a>
+    </nav>
+  </div>
+</footer>
+<script>
+"use strict";
+const releaseBase = "https://github.com/michael-borck/sartor/releases/latest/download/";
+const downloads = {
+  macArm: { label: "Download for macOS (Apple Silicon)", file: "Sartor-macOS-Apple-Silicon.dmg" },
+  macIntel: { label: "Download for macOS (Intel)", file: "Sartor-macOS-Intel.dmg" },
+  windows: { label: "Download for Windows", file: "Sartor-Windows-x64-Setup.exe" },
+  linux: { label: "Download for Linux", file: "Sartor-Linux-x86_64.AppImage" }
+};
+
+function selectDownload(kind) {
+  const choice = downloads[kind];
+  if (!choice) return;
+  const button = document.getElementById("primary-download");
+  button.href = releaseBase + choice.file;
+  button.textContent = choice.label;
+  document.getElementById("download-note").textContent = "We selected the likely installer for this device. Every platform is listed below.";
+}
+
+async function detectPlatform() {
+  const ua = navigator.userAgent || "";
+  let architecture = "";
+  let platform = "";
+  if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+    try {
+      const values = await navigator.userAgentData.getHighEntropyValues(["architecture", "platform"]);
+      architecture = (values.architecture || "").toLowerCase();
+      platform = (values.platform || "").toLowerCase();
+    } catch (error) {
+      // Detection is only an enhancement; all direct links remain visible.
+    }
+  }
+  const text = (platform + " " + ua).toLowerCase();
+  if (text.includes("win")) {
+    selectDownload("windows");
+  } else if (text.includes("mac")) {
+    selectDownload(architecture.includes("x86") || /intel/.test(ua.toLowerCase()) ? "macIntel" : "macArm");
+  } else if (text.includes("linux") || text.includes("x11")) {
+    selectDownload("linux");
+  }
+}
+
+detectPlatform();
+</script>
+</body>
+</html>

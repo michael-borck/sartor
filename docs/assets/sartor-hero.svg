@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">A tailored resume linked to its evidence</title>
+  <desc id="desc">A resume page with supported claims connected to gold evidence markers and a framework statement panel.</desc>
+  <rect width="1200" height="900" fill="#162433"/>
+  <path d="M118 106h560l112 112v600H118z" fill="#ffffff"/>
+  <path d="M678 106v112h112z" fill="#c7d6e4"/>
+  <rect x="176" y="176" width="292" height="44" rx="22" fill="#17202b"/>
+  <rect x="176" y="250" width="440" height="24" rx="12" fill="#8aa2b8"/>
+  <rect x="176" y="334" width="150" height="30" rx="15" fill="#205a8a"/>
+  <circle cx="190" cy="432" r="17" fill="#d8a94d"/>
+  <rect x="232" y="414" width="410" height="36" rx="18" fill="#244a68"/>
+  <circle cx="190" cy="522" r="17" fill="#d8a94d"/>
+  <rect x="232" y="504" width="330" height="36" rx="18" fill="#244a68"/>
+  <circle cx="190" cy="612" r="17" fill="#d8a94d"/>
+  <rect x="232" y="594" width="380" height="36" rx="18" fill="#244a68"/>
+  <rect x="176" y="716" width="240" height="30" rx="15" fill="#b9c9d8"/>
+  <path d="M650 432h108M650 522h108M650 612h108" stroke="#d8a94d" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 20"/>
+  <rect x="758" y="278" width="330" height="390" fill="#f3f5f7"/>
+  <rect x="758" y="278" width="330" height="74" fill="#205a8a"/>
+  <rect x="790" y="300" width="170" height="28" rx="14" fill="#ffffff"/>
+  <circle cx="804" cy="414" r="15" fill="#18794e"/>
+  <rect x="840" y="398" width="190" height="28" rx="14" fill="#35566f"/>
+  <circle cx="804" cy="492" r="15" fill="#18794e"/>
+  <rect x="840" y="476" width="150" height="28" rx="14" fill="#35566f"/>
+  <circle cx="804" cy="570" r="15" fill="#18794e"/>
+  <rect x="840" y="554" width="205" height="28" rx="14" fill="#35566f"/>
+  <rect x="790" y="610" width="120" height="22" rx="11" fill="#b9c9d8"/>
+</svg>
